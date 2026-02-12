@@ -1,13 +1,10 @@
 module regfile(
     input clk,
     input reset,
-    input [4:0] rs1,
-    input [4:0] rs2,
-    output [31:0] a,
-    output [31:0] b,
-    input [4:0] write_reg,
-    input [31:0] write_data,
     input write_en
+    input [4:0] rs1, rs2, write_reg,
+    input [31:0] write_data,
+    output [31:0] a,b
 );
 
     reg [31:0] register [0:31];
