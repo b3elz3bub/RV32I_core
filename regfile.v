@@ -1,7 +1,7 @@
 module regfile(
     input clk,
     input reset,
-    input write_en
+    input write_en,
     input [4:0] rs1, rs2, write_reg,
     input [31:0] write_data,
     output [31:0] a,b
