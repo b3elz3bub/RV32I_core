@@ -1,0 +1,13 @@
+vivado*.jou
+vivado*.log
+*.backup.jou
+*.backup.log
+.Xil/
+*.str
+*.zip
+*.dcp
+*.rpt
+*.bit
+*.ltx
+*.debug
+usage_statistics_webtalk.*
