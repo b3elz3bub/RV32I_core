@@ -1,13 +1,35 @@
+# Logs
 vivado*.jou
 vivado*.log
 *.backup.jou
 *.backup.log
-.Xil/
 *.str
-*.zip
-*.dcp
-*.rpt
+
+# Generated directories
+.cache/
+.hw/
+.ip_user_files/
+.runs/
+.sim/
+.gen/
+.Xil/
+
+# Bitstream / reports / checkpoints
 *.bit
 *.ltx
+*.dcp
+*.rpt
 *.debug
+
+# Webtalk
 usage_statistics_webtalk.*
+
+# Simulation
+xsim.dir/
+*.wdb
+*.vcd
+*.pb
+
+# Project mode (ignore if using Tcl-based flow)
+*.xpr
+*.xpr.user
