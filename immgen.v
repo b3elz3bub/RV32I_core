@@ -13,7 +13,7 @@ module immgen(
             5'b11011:
                 imm = { {12{inst[31]}}, inst[19:12], inst[20], inst[30:21],1'b0 }; // J-type
             5'b00101, 5'b01101:
-                imm = { inst[31:12], 12{1'b0} };                                   // U-type
+                imm = { inst[31:12], 12'b0 };                                      // U-type
             default: imm = 32'bx;
         endcase
     end
