@@ -30,6 +30,7 @@ xsim.dir/
 *.vcd
 *.pb
 
-# Project mode (ignore if using Tcl-based flow)
+# Project mode
 *.xpr
 *.xpr.user
+*.code-workspace
