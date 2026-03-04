@@ -10,14 +10,14 @@ module alu(
 
     always @(*) begin
         case (alu_ctrl[3:1])
-            3'b000: rslt = (alu_ctrl[0] == 1) ? a - b : a + b;                      //(ADD,SUB)
-            3'b001: rslt = a << b[4:0];                                             // SLL
-            3'b010: rslt = ($signed(a) < $signed(b)) ? 32'b1 : 32'b0;               // SLT
-            3'b011: rslt = (a < b) ? 32'b1 : 32'b0;                                 // SLTU
-            3'b100: rslt = a ^ b;                                                   // XOR
-            3'b101: rslt = (alu_ctrl[0] == 1) ? $signed(a) >>> b[4:0] : a >> b[4:0];//(SRL,SRA)
-            3'b110: rslt = a | b;                                                   // OR
-            3'b111: rslt = a & b;                                                   // AND
+            3'b000: rslt = (alu_ctrl[0] == 1) ? a - b : a + b;                       //(ADD,SUB)
+            3'b001: rslt = a << b[4:0];                                              // SLL
+            3'b010: rslt = ($signed(a) < $signed(b)) ? 32'b1 : 32'b0;                // SLT
+            3'b011: rslt = (a < b) ? 32'b1 : 32'b0;                                  // SLTU
+            3'b100: rslt = a ^ b;                                                    // XOR
+            3'b101: rslt = (alu_ctrl[0] == 1) ? $signed(a) >>> b[4:0] : a >> b[4:0]; //(SRL,SRA)
+            3'b110: rslt = a | b;                                                    // OR
+            3'b111: rslt = a & b;                                                    // AND
         endcase
     end
 endmodule;
