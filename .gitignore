@@ -1,6 +1,7 @@
 # Logs
 vivado*.jou
 vivado*.log
+temp.md
 *.backup.jou
 *.backup.log
 *.str

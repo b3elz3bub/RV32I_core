@@ -6,7 +6,7 @@ module imem(
     // synch uart loaded ports
     input load,
     input [31:0] data,
-    input [31:0] addr,
+    input [31:0] addr
 );
     reg [31:0] mem [0:1023]; //4K memory
     always @(posedge clk) begin

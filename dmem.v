@@ -3,7 +3,6 @@ module dmem(
     input [31:0] addr,
     input [31:0] write_data,
     input write_en,
-    input read_en,
     input [3:0] byte_en,
     output [31:0] read_data
 );
