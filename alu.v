@@ -10,7 +10,7 @@ module alu(
 
     always @(*) begin
         case (alu_ctrl[3:1])
-            3'b000: rslt = (alu_ctrl[0] == 1) ? a - b : a + b;                       //(ADD,SUB)
+            3'b000: rslt = (alu_ctrl[0])? a - b : a + b;                             //(ADD,SUB)
             3'b001: rslt = a << b[4:0];                                              // SLL
             3'b010: rslt = ($signed(a) < $signed(b)) ? 32'b1 : 32'b0;                // SLT
             3'b011: rslt = (a < b) ? 32'b1 : 32'b0;                                  // SLTU
