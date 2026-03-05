@@ -20,4 +20,4 @@ module alu(
             3'b111: rslt = a & b;                                                    // AND
         endcase
     end
-endmodule;
+endmodule
