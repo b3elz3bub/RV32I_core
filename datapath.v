@@ -1,23 +1,22 @@
 module datapath(
     input clk,
     input rst,
-    input [31:0] inst,
     input regwrite_ctrl,
     input memwrite_ctrl,
+    input [3:0]membyte_ctrl,
     input [3:0] alu_ctrl,
     input bsel_ctrl,
     input reginp_ctrl,
     input branch_ctrl,
-    input memread_ctrl,
     
     input uart_load,
     input [31:0] uart_data,
-    input [31:0] imem_addr
+    input [31:0] imem_addr,
 
     output reg [7:0] leds,
     input [7:0] switches
 );
-
+    wire[31:0] inst;
     wire[31:0] pc_next, pc_out;
     wire[31:0] branch_target;
     wire[31:0] pc_plus_4;
@@ -60,7 +59,7 @@ module datapath(
     );
     system_bus system_bus_inst(
         .clk(clk),
-        .rst(rst),
+        .byte_en(membyte_ctrl),
         .addr(alu_out),
         .write_data(write_data),
         .write_en(memwrite_ctrl),
@@ -69,6 +68,7 @@ module datapath(
         .switches(switches)
     );
     imem imem_inst(
+        .clk(clk),
         .pc(pc_out),
         .inst(inst),
 
@@ -81,14 +81,10 @@ module datapath(
     assign pc_plus_4 = pc_out + 4;
     assign branch_target = pc_out + imm;
 
-    always @(*) begin
-        // PC Mux
-        assign pc_next = (branch_ctrl && zero_flag) ? branch_target : pc_plus_4;
-
-        // ALU B-Source Mux
-        assign b = (bsel_ctrl) ? imm : rs2;
-
-        // Writeback Mux
-        assign write_data = (reginp_ctrl) ? mem_data : alu_out;
-    end
+    //PC update
+    assign pc_next = (branch_ctrl && zero_flag) ? branch_target : pc_plus_4;
+    // ALU B-Source Mux
+    assign b = (bsel_ctrl) ? imm : rs2;
+    // Writeback Mux
+    assign write_data = (reginp_ctrl) ? mem_data : alu_out;
 endmodule
