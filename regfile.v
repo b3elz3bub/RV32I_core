@@ -5,7 +5,6 @@ module regfile(
     input [31:0] write_data,
     output [31:0] a,b
 );
-    integer i;
     reg [31:0] register [0:31];
     always @(posedge clk) begin
         if (write_en && write_reg != 5'b0) begin
