@@ -16,8 +16,9 @@ module datapath(
 
     output reg [7:0] leds,
     input [7:0] switches
-);  
-    wire[31:0] pc_next,pc_out;
+);
+
+    wire[31:0] pc_next, pc_out;
     wire[31:0] branch_target;
     wire[31:0] pc_plus_4;
 
