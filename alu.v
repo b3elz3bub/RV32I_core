@@ -1,12 +1,16 @@
 module alu(
     input [31:0] a,b,
-    input [3:0] alu_ctrl, 
-    //top 3 bits funct 3 and lsb that is in funct 7[5] for (srl,sra) and (add,sub)
+    input [3:0] alu_ctrl,
+    // top 3 bits funct3, lsb from funct7[5] for (srl,sra) and (add,sub)
     output reg [31:0] rslt,
-    output zero_flag
-);  
+    output zero_flag,
+    output lt_u  // 1 when a < b (unsigned), valid when alu_ctrl is SUB (for BLTU/BGEU)
+);
+    wire do_sub = (alu_ctrl[3:1] == 3'b000 && alu_ctrl[0] == 1'b1);
+    wire [32:0] sub_sum = {1'b0, a} + {1'b0, ~b} + 33'd1;
 
     assign zero_flag = (rslt == 32'b0);
+    assign lt_u = do_sub ? ~sub_sum[32] : 1'b0;  // borrow when a < b unsigned
 
     always @(*) begin
         case (alu_ctrl[3:1])
