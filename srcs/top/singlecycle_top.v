@@ -67,4 +67,13 @@ module top(
         .jal_ctrl(jal_ctrl),
         .jalr_ctrl(jalr_ctrl)
     );
+
+    assign ld[0]=locked;
+    reg [23:0] heartbeat_cnt;
+    always @(posedge cpu_clk) begin
+        if (rst_btn) heartbeat_cnt <= 0;
+        else heartbeat_cnt <= heartbeat_cnt+1;
+    end
+    
+    assign ld[7] = heartbeat_cnt[23];
 endmodule
