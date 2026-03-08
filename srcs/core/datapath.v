@@ -13,6 +13,7 @@ module datapath(
     input [2:0] branchcond_ctrl,
     input jal_ctrl,
     input jalr_ctrl,
+    output [31:0] instr,
     
     input uart_load,
     input [31:0] uart_data,
@@ -67,20 +68,15 @@ module datapath(
         .b(rs2)
     );
 
-    // Derive per-byte enables and store data for SB/SH/SW from funct3 (via memstore_ctrl)
-    // memstore_ctrl encodings from control:
-    //   4'b0001: SB,  4'b0011: SH,  4'b1111: SW
     assign byte_en = (memstore_ctrl == 4'b0001) ? (4'b0001 << alu_out[1:0]) :
                      (memstore_ctrl == 4'b0011) ? (4'b0011 << {alu_out[1], 1'b0}) :
                      memstore_ctrl;
 
-    // Only the low 8/16/32 bits of rs2 are architecturally used; here we place them
-    // into the correct byte lane(s) of the 32-bit write_data bus based on addr[1:0].
     always @(*) begin
         case (memstore_ctrl)
             4'b0001: store_data = rs2 << {alu_out[1:0], 3'b000};   // SB
             4'b0011: store_data = rs2 << {alu_out[1],   4'b0000};  // SH (aligned: addr[0] assumed 0)
-            default: store_data = rs2;                             // SW or others
+            default: store_data = rs2;                             // SW
         endcase
     end
 
@@ -110,10 +106,11 @@ module datapath(
         .data(uart_data)
 
     );
+    assign instr = inst;
 
     assign pc_plus_4 = pc_out + 4;
     assign branch_target = pc_out + imm;
-    
+
     // PC update: branch condition by funct3 (BEQ=000, BNE=001, BLT=100, BGE=101, BLTU=110, BGEU=111)
     wire branch_cond_final, branch_cond;
     wire [31:0] jalr_target;
