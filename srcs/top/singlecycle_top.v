@@ -17,22 +17,16 @@ module top(
 
     wire [31:0] inst;
     wire [1:0] regwrite_ctrl;
-    wire regwrite_en;
-    wire memwrite_en;
-    wire [2:0] memload_ctrl;
-    wire [3:0] memstore_ctrl;
-    wire [3:0] alu_ctrl;
-    wire auipc_ctrl;
-    wire bsel_ctrl;
-    wire branch_en;
-    wire [2:0] branchcond_ctrl;
-    wire jal_ctrl;
-    wire jalr_ctrl;
+    wire regwrite_en, memwrite_en, auipc_ctrl, bsel_ctrl, branch_en, jal_ctrl, jalr_ctrl;
+    wire [2:0] memload_ctrl, branchcond_ctrl;
+    wire [3:0] memstore_ctrl, alu_ctrl;
+
+    wire [7:0] cpu_led_out;
 
     datapath cpu_core (
         .clk(cpu_clk),
         .rst(~locked || rst_btn),
-        .leds(ld),
+        .leds(cpu_led_out),
         .switches(sw),
         .instr(inst),
         .regwrite_ctrl(regwrite_ctrl),
@@ -68,12 +62,13 @@ module top(
         .jalr_ctrl(jalr_ctrl)
     );
 
-    assign ld[0]=locked;
+    assign ld[0] = locked;               // Status: PLL Locked
+    assign ld[7] = heartbeat_cnt[23];    // Status: CPU Clocking
+    assign ld[6:1] = cpu_led_out[6:1];   // Software: Bits 1-6
+
     reg [23:0] heartbeat_cnt;
     always @(posedge cpu_clk) begin
         if (rst_btn) heartbeat_cnt <= 0;
-        else heartbeat_cnt <= heartbeat_cnt+1;
+        else heartbeat_cnt <= heartbeat_cnt + 1;
     end
-    
-    assign ld[7] = heartbeat_cnt[23];
 endmodule
