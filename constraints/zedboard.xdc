@@ -1,6 +1,7 @@
 # ----------------------------------------------------------------------------
 # Clock Signal (100MHz Oscillator)
 # ----------------------------------------------------------------------------
+create_clock -period 10.000 -name clk_100m [get_ports clk_100m]
 set_property PACKAGE_PIN Y9 [get_ports {clk_100m}];  #
 set_property IOSTANDARD LVCMOS33 [get_ports {clk_100m}]; #
 

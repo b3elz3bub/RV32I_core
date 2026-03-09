@@ -41,9 +41,9 @@ module top(
         .branchcond_ctrl(branchcond_ctrl),
         .jal_ctrl(jal_ctrl),
         .jalr_ctrl(jalr_ctrl),
-        .uart_load(),
-        .uart_data(),
-        .imem_addr()
+        .uart_load(1'b0),
+        .uart_data(32'd0),
+        .imem_addr(32'd0)
     );
 
     control cpu_ctrl (
@@ -62,11 +62,12 @@ module top(
         .jalr_ctrl(jalr_ctrl)
     );
 
+    reg [23:0] heartbeat_cnt;
+
     assign ld[0] = locked;               // Status: PLL Locked
     assign ld[7] = heartbeat_cnt[23];    // Status: CPU Clocking
     assign ld[6:1] = cpu_led_out[6:1];   // Software: Bits 1-6
 
-    reg [23:0] heartbeat_cnt;
     always @(posedge cpu_clk) begin
         if (rst_btn) heartbeat_cnt <= 0;
         else heartbeat_cnt <= heartbeat_cnt + 1;

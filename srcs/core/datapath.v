@@ -19,7 +19,7 @@ module datapath(
     input [31:0] uart_data,
     input [31:0] imem_addr,
 
-    output reg [7:0] leds,
+    output [7:0] leds,
     input [7:0] switches
 );
     wire[31:0] inst;
@@ -35,7 +35,7 @@ module datapath(
     wire [31:0] alu_out;
 
     wire [31:0] mem_data;
-    reg  [31:0] processed_mem_data;
+    wire [31:0] processed_mem_data;
     reg  [31:0] store_data;
     wire [3:0] byte_en;
     pc pc_inst(

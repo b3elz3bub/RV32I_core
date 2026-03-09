@@ -1,38 +1,43 @@
-# --- Build Script for RISC-V Core ---
+# --- Configuration & Cleanup ---
+set output_dir "./build_out"
+file delete -force $output_dir
+file mkdir $output_dir
+file mkdir $output_dir/ip ;# FIX: Explicitly create the IP directory first
 
-# 1. Setup Project in Memory
-create_project -in_memory -part xc7z020clg484-1
+# Set the target FPGA part for the ZedBoard
+set_part xc7z020clg484-1
 
-# 2. Include all Sources
-# Assuming your directory structure: /src/core, /src/memory, /src/top
-add_files [glob ./src/core/*.v]
-add_files [glob ./src/memory/*.v]
-add_files [glob ./src/top/*.v]
-add_files ./include/defines.vh
-add_files -fileset constrs_1 ./constraints/zedboard.xdc
+# --- 1. Read Design Sources ---
+read_verilog ./include/header.vh
+set_property is_global_include true [get_files ./include/header.vh]
 
-# Set Global Include for the header
-set_property is_global_include true [get_files ./include/defines.vh]
+read_verilog [glob ./srcs/*/*.v]
 
-# 3. Run "Linter" (Synthesis Check)
-# This will catch syntax errors, multi-driven nets, and port mismatches
-synth_design -top top -part xc7z020clg484-1 -lint
+# --- 2. Read Constraints ---
+read_xdc ./constraints/zedboard.xdc
 
-# 4. Full Synthesis and Implementation
-launch_runs synth_1 -jobs 4
-wait_on_run synth_1
+# --- 3. In-Memory IP Generation ---
+create_ip -name clk_wiz -vendor xilinx.com -library ip -version 6.0 -module_name clk_wiz_0 -dir $output_dir/ip
+set_property -dict [list \
+  CONFIG.CLKOUT1_JITTER {290.478} \
+  CONFIG.CLKOUT1_PHASE_ERROR {133.882} \
+  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {10.000} \
+  CONFIG.MMCM_CLKFBOUT_MULT_F {15.625} \
+  CONFIG.MMCM_CLKOUT0_DIVIDE_F {78.125} \
+  CONFIG.MMCM_DIVCLK_DIVIDE {2} \
+] [get_ips clk_wiz_0]
 
-# Check for Synthesis Errors
-if {[get_property PROGRESS [get_runs synth_1]] != "100%"} {
-    error "Synthesis failed! Check the log."
-}
+# Synthesize the IP Out-Of-Context
+generate_target {synthesis} [get_ips clk_wiz_0]
+synth_ip [get_ips clk_wiz_0] 
 
-launch_runs impl_1 -to_step write_bitstream -jobs 4
-wait_on_run impl_1
+# --- 4. Top-Level Synthesis ---
+synth_design -top top -part xc7z020clg484-1
 
-# 5. Report Timing and Utilization
-open_run impl_1
-report_timing_summary -file timing_summary.txt
-report_utilization -file utilization_report.txt
+# --- 5. Implementation & Bitstream ---
+opt_design
+place_design
+route_design
+write_bitstream -force $output_dir/zedboard_riscv.bit
 
-puts "Build Complete. Bitstream generated in the .runs directory."
+puts "Build complete. Bitstream is located at: $output_dir/zedboard_riscv.bit"

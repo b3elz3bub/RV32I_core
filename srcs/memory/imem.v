@@ -18,7 +18,7 @@ module imem(
 
     initial begin
         //preload the memory with the program.mem file
-        $readmemh("program.mem", mem);
+        $readmemh("./software/program.mem", mem);
     end
 
 endmodule

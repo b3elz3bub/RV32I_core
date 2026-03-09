@@ -11,13 +11,6 @@ module regfile(
             register[write_reg] <= write_data;
         end
     end
-    assign a =
-        (rs1 == 5'd0) ? 32'b0 :
-        (write_en && write_reg == rs1) ? write_data :
-        register[rs1];
-
-    assign b =
-        (rs2 == 5'd0) ? 32'b0 :
-        (write_en && write_reg == rs2) ? write_data :
-        register[rs2];
+    assign a = (rs1 == 5'd0) ? 32'b0 : register[rs1];
+    assign b = (rs2 == 5'd0) ? 32'b0 : register[rs2];
 endmodule
