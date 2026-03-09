@@ -21,6 +21,10 @@ temp.md
 *.dcp
 *.rpt
 *.debug
+*.txt
+build_out/
+ip/
+logs/
 
 # Webtalk
 usage_statistics_webtalk.*
