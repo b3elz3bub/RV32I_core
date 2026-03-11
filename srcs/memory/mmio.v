@@ -10,32 +10,40 @@ module system_bus(
     input [7:0] switches
 );
 
-    wire io_en;
-    assign io_en = (addr<32'h00001000)? 1'b0:1'b1;
+    // 1. Explicit Address Map (Matches your C code)
+    wire is_ram    = (addr < 32'h00001000);
+    wire is_led    = (addr == 32'h00001000);
+    wire is_switch = (addr == 32'h00002000); 
+    // Note: If you add UART later, make UART 0x3000 to avoid colliding with switches here.
+
     wire [31:0] ram_read_data;
 
+    // 2. Data Memory Instance
     dmem ram_inst(
         .clk(clk),
         .addr(addr),
         .write_data(write_data),
-        .write_en(write_en && !io_en),
+        .write_en(write_en && is_ram), // Only write if address is in RAM range
         .byte_en(byte_en),
         .read_data(ram_read_data)
     );
 
+    // 3. The Read Multiplexer
     always @(*) begin
-        if (!io_en) begin
+        if (is_ram) begin
             read_data = ram_read_data;
-        end else if (io_en && addr[3:0] == 4'h0) begin
-            read_data = {24'b0, leds};
-        end else if (io_en && addr[3:0] == 4'h4) begin
-            read_data = {24'b0, switches};
+        end else if (is_led) begin
+            read_data = {24'b0, leds};     // Read back LED state
+        end else if (is_switch) begin
+            read_data = {24'b0, switches}; // Read physical switches
         end else begin
-            read_data = 32'h0;
+            read_data = 32'h0;             // Default/Safe fallback
         end
     end
+
+    // 4. The Write Demultiplexer
     always @(posedge clk) begin
-        if (io_en && write_en && addr[3:0] == 4'h0) begin
+        if (write_en && is_led) begin
             leds <= write_data[7:0];
         end
     end
