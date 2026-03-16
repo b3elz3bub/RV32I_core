@@ -22,6 +22,8 @@ temp.md
 *.rpt
 *.debug
 *.txt
+*.elf
+*.bin
 build_out/
 ip/
 logs/

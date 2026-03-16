@@ -11,7 +11,9 @@ set_part xc7z020clg484-1
 read_verilog ./include/header.vh
 set_property is_global_include true [get_files ./include/header.vh]
 
-read_verilog [glob ./srcs/*/*.v]
+read_verilog [glob ./srcs/core/*.v]
+read_verilog [glob ./srcs/memory/*.v]
+read_verilog [glob ./srcs/top/*.v]
 
 # --- 2. Read Constraints ---
 read_xdc ./constraints/zedboard.xdc
