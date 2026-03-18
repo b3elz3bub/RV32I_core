@@ -11,7 +11,8 @@ module control(
     output reg branch_en,
     output reg [2:0] branchcond_ctrl,
     output reg jal_ctrl,
-    output reg jalr_ctrl
+    output reg jalr_ctrl,
+    output reg trap_en
 );
     wire [2:0] funct3 = inst[14:12];
     wire [6:0] opcode = inst[6:0];
@@ -23,7 +24,7 @@ module control(
         jal_ctrl = 0;         jalr_ctrl = 0;      auipc_ctrl = 0;
         bsel_ctrl = 0;        regwrite_ctrl = 2'b00;
         alu_ctrl = 4'b0000;   memstore_ctrl = 4'b0000;
-        memload_ctrl = 3'b000; branchcond_ctrl = 3'b000;
+        memload_ctrl = 3'b000; branchcond_ctrl = 3'b000; trap_en=0;
 
         case (opcode)
             7'b0000011: begin // Load
@@ -80,6 +81,9 @@ module control(
                 regwrite_ctrl = 2'b10;
                 jalr_ctrl = 1;
                 bsel_ctrl = 1;
+            end
+            7'b1110011: begin // ECALL, EBREAK
+                trap_en = (funct3 == 3'b000)? 1 : 0 ;
             end
         endcase
     end
