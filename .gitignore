@@ -41,3 +41,6 @@ xsim.dir/
 *.xpr
 *.xpr.user
 *.code-workspace
+
+#temporary files
+temp.tcl

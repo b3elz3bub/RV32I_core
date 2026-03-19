@@ -2,7 +2,7 @@ module imem(
     input clk,
     //asynch cpu ports
     input [31:0] pc,
-    output [31:0] inst,
+    output reg [31:0] inst,
     // synch uart loaded ports
     input load,
     input [31:0] data,
@@ -13,8 +13,8 @@ module imem(
         if (load) begin
             mem[addr[11:2]] <= data;
         end
+        inst <= mem[pc[11:2]];
     end
-    assign inst = mem[pc[11:2]];
 
     initial begin
         //preload the memory with the program.mem file

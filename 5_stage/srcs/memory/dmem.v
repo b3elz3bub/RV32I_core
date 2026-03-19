@@ -4,13 +4,12 @@ module dmem(
     input [31:0] write_data,
     input write_en,
     input [3:0] byte_en,
-    output [31:0] read_data
+    output reg [31:0] read_data
 );
     reg [7:0] mem0[0:1023];
     reg [7:0] mem1[0:1023];
     reg [7:0] mem2[0:1023];
     reg [7:0] mem3[0:1023];
-    assign read_data = {mem3[addr[11:2]], mem2[addr[11:2]], mem1[addr[11:2]], mem0[addr[11:2]]};
     always @(posedge clk) begin
         if (write_en) begin
             if (byte_en[0]) begin
@@ -26,5 +25,6 @@ module dmem(
                 mem3[addr[11:2]] <= write_data[31:24];
             end
         end
+        read_data <= {mem3[addr[11:2]], mem2[addr[11:2]], mem1[addr[11:2]], mem0[addr[11:2]]};
     end
 endmodule
