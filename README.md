@@ -84,7 +84,7 @@ Ensure that you change directory to ./single_cycle before running the TCL script
 
 ---
 
-##Current WIP:
+## Current WIP:
 - UART bootloader
 - 5 stage pipelined design
 - CSR and TRAP related stuff
