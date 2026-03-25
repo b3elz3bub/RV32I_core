@@ -1,3 +1,4 @@
+`include "params.vh"
 module pc (
 	input 					clk,
 	input 					rst,
@@ -5,9 +6,9 @@ module pc (
 	output reg 	[31:0] 		pc_out
 );
 
-	always @(posedge clk) begin
+	always @(posedge clk or posedge rst) begin
 		if (rst) begin
-			pc_out <= 32'b0;
+			pc_out <= `RESET_VECTOR;
 		end else begin 
 			pc_out <= pc_next;
 		end
