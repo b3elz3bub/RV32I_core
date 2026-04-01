@@ -6,7 +6,7 @@ module IF_ID (
     input wire        stall,
     input wire [31:0] if_inst,
     input wire [31:0] if_pc,
-    input wire [31:0] if_pc_plus_4, // for JAL/JALR
+    input wire [31:0] if_pc_plus_4,
     
     output reg [31:0] id_inst,
     output reg [31:0] id_pc,
