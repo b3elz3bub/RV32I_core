@@ -12,14 +12,14 @@ module control(
     output reg [2:0] branchcond_ctrl,
     output reg jal_ctrl,
     output reg jalr_ctrl,
-    output reg trap_en
+    output reg trap_en,
+    output reg [1:0] pc_sel
 );
     wire [2:0] funct3 = inst[14:12];
     wire [6:0] opcode = inst[6:0];
     wire [6:0] funct7 = inst[31:25];
 
     always @(*) begin
-        // Default values to ensure no latches are inferred
         regwrite_en = 0;      memwrite_en = 0;    branch_en = 0;
         jal_ctrl = 0;         jalr_ctrl = 0;      auipc_ctrl = 0;
         bsel_ctrl = 0;        regwrite_ctrl = 2'b00;
@@ -81,6 +81,7 @@ module control(
                 regwrite_ctrl = 2'b10;
                 jalr_ctrl = 1;
                 bsel_ctrl = 1;
+                pc_sel[1] =1;
             end
             7'b1110011: begin // ECALL, EBREAK
                 trap_en = (funct3 == 3'b000)? 1 : 0 ;
