@@ -23,7 +23,8 @@ module datapath(
     input [7:0] switches
 );
     wire[31:0] inst;
-    wire[31:0] pc_next, pc_out;
+    wire[31:0] pc_out;
+    reg [31:0] pc_next;
     wire[31:0] branch_target;
     wire[31:0] pc_plus_4;
 
@@ -111,19 +112,35 @@ module datapath(
     assign pc_plus_4 = pc_out + 4;
     assign branch_target = pc_out + imm;
 
-    // PC update: branch condition by funct3 (BEQ=000, BNE=001, BLT=100, BGE=101, BLTU=110, BGEU=111)
-    wire branch_cond_final, branch_cond;
+    // PC update logic
+    wire [1:0] pc_sel;
+    assign pc_sel[1] = jalr_ctrl;
+    assign pc_sel[0] = jal_ctrl | (branch_en & branch_cond);
+
+    reg branch_cond;
+    always @(*) begin
+        case (branchcond_ctrl)
+            3'b000: branch_cond =  zero_flag;
+            3'b001: branch_cond = ~zero_flag;
+            3'b100: branch_cond =  alu_out[0];
+            3'b101: branch_cond = ~alu_out[0];
+            3'b110: branch_cond =  alu_lt_u;
+            3'b111: branch_cond = ~alu_lt_u;
+            default: branch_cond = 1'b0;
+        endcase
+    end
+
     wire [31:0] jalr_target;
     assign jalr_target = {alu_out[31:1], 1'b0};
-    assign branch_cond = (branchcond_ctrl == 3'b000) ? zero_flag   :        // BEQ
-                         (branchcond_ctrl == 3'b001) ? ~zero_flag  :        // BNE
-                         (branchcond_ctrl == 3'b100) ? alu_out[0]  :        // BLT (signed, via SLT)
-                         (branchcond_ctrl == 3'b101) ? ~alu_out[0] :        // BGE (signed, via SLT)
-                         (branchcond_ctrl == 3'b110) ? alu_lt_u     :       // BLTU
-                         (branchcond_ctrl == 3'b111) ? ~alu_lt_u    : 1'b0; // BGEU
-    assign branch_cond_final = branch_cond;
-    assign pc_next = (branch_en && branch_cond_final || jal_ctrl) ? branch_target : (jalr_ctrl) ? jalr_target : pc_plus_4;
-
+    always @(*) begin
+        case (pc_sel)
+            2'b00: pc_next = pc_plus_4;
+            2'b01: pc_next = branch_target;
+            2'b10: pc_next = jalr_target;
+            default: pc_next = pc_plus_4;
+        endcase
+    end
+    
     // ALU Source Mux
     assign a = (auipc_ctrl) ? pc_out : rs1;
     assign b = (bsel_ctrl) ? imm : rs2;
