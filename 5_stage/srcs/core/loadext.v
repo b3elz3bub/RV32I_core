@@ -15,7 +15,7 @@ module loadext(
                     2'b11: processed_mem_data = {{24{mem_data[31]}}, mem_data[31:24]};
                 endcase
             3'b100: // LBU (Byte Unsigned)
-                case(byte_addr)
+                case(byte_addr[1:0])
                     2'b00: processed_mem_data = {24'b0, mem_data[7:0]};
                     2'b01: processed_mem_data = {24'b0, mem_data[15:8]};
                     2'b10: processed_mem_data = {24'b0, mem_data[23:16]};
