@@ -7,10 +7,6 @@ file mkdir $output_dir/ip ;# FIX: Explicitly create the IP directory first
 # Set the target FPGA part for the ZedBoard
 set_part xc7z020clg484-1
 
-# --- 1. Read Design Sources ---
-read_verilog ./include/header.vh
-set_property is_global_include true [get_files ./include/header.vh]
-
 read_verilog [glob ./srcs/core/*.v]
 read_verilog [glob ./srcs/memory/*.v]
 read_verilog [glob ./srcs/top/*.v]
@@ -23,7 +19,7 @@ create_ip -name clk_wiz -vendor xilinx.com -library ip -version 6.0 -module_name
 set_property -dict [list \
   CONFIG.CLKOUT1_JITTER {290.478} \
   CONFIG.CLKOUT1_PHASE_ERROR {133.882} \
-  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {10.000} \
+  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {50.000} \
   CONFIG.MMCM_CLKFBOUT_MULT_F {15.625} \
   CONFIG.MMCM_CLKOUT0_DIVIDE_F {78.125} \
   CONFIG.MMCM_DIVCLK_DIVIDE {2} \
