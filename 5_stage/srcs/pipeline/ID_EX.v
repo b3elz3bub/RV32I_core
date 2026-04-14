@@ -47,7 +47,22 @@ module ID_EX(
     input [1:0]  id_regwrite_ctrl,
 
     output reg        ex_regwrite_en,
-    output reg [1:0]  ex_regwrite_ctrl
+    output reg [1:0]  ex_regwrite_ctrl,
+
+
+    // --- NEW CSR INPUTS ---
+    input wire id_csr_we,
+    input wire [1:0] id_csr_op,
+    input wire id_csr_imm_sel,
+    input wire id_wb_is_csr,
+    input wire [11:0] id_csr_addr,
+
+    // --- NEW CSR OUTPUTS ---
+    output reg ex_csr_we,
+    output reg [1:0] ex_csr_op,
+    output reg ex_csr_imm_sel,
+    output reg ex_wb_is_csr,
+    output reg [11:0] ex_csr_addr
 );
     always @(posedge clk or posedge rst) begin
         if (rst || flush) begin
@@ -75,6 +90,12 @@ module ID_EX(
             // Control – WB
             ex_regwrite_en   <= 1'b0;
             ex_regwrite_ctrl <= 2'b0;
+
+            ex_csr_we      <= 1'b0;
+            ex_csr_op      <= 2'b00;
+            ex_csr_imm_sel <= 1'b0;
+            ex_wb_is_csr   <= 1'b0;
+            ex_csr_addr    <= 12'b0;
         end
         else if (!stall) begin
             // Data
@@ -101,6 +122,12 @@ module ID_EX(
             // Control – WB
             ex_regwrite_en   <= id_regwrite_en;
             ex_regwrite_ctrl <= id_regwrite_ctrl;
+
+            ex_csr_we      <= id_csr_we;
+            ex_csr_op      <= id_csr_op;
+            ex_csr_imm_sel <= id_csr_imm_sel;
+            ex_wb_is_csr   <= id_wb_is_csr;
+            ex_csr_addr    <= id_csr_addr;
         end
     end
 endmodule

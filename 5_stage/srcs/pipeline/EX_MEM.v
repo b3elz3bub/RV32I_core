@@ -31,7 +31,15 @@ module EX_MEM(
     input [1:0]  ex_regwrite_ctrl,
 
     output reg        mem_regwrite_en,
-    output reg [1:0]  mem_regwrite_ctrl
+    output reg [1:0]  mem_regwrite_ctrl,
+
+    // --- NEW CSR INPUTS ---
+    input wire ex_wb_is_csr,
+    input wire [31:0] ex_csr_rdata,
+
+    // --- NEW CSR OUTPUTS ---
+    output reg mem_wb_is_csr,
+    output reg [31:0] mem_csr_rdata
 );
     always @(posedge clk or posedge rst) begin
         if (rst || flush) begin
@@ -48,6 +56,9 @@ module EX_MEM(
             // Control – WB
             mem_regwrite_en  <= 1'b0;
             mem_regwrite_ctrl <= 2'b0;
+
+            mem_wb_is_csr <= 1'b0;
+            mem_csr_rdata <= 32'b0;
         end
         else begin
             // Data
@@ -63,6 +74,9 @@ module EX_MEM(
             // Control – WB
             mem_regwrite_en  <= ex_regwrite_en;
             mem_regwrite_ctrl <= ex_regwrite_ctrl;
+
+            mem_wb_is_csr <= ex_wb_is_csr;
+            mem_csr_rdata <= ex_csr_rdata;
         end
     end
 endmodule

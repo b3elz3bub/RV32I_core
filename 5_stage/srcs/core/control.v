@@ -12,11 +12,18 @@ module control(
     output reg [2:0] branchcond_ctrl,
     output reg jal_ctrl,
     output reg jalr_ctrl,
-    output reg trap_en
+    output reg trap_en,
+
+    // CSR
+    output reg csr_we,
+    output reg [1:0] csr_op,
+    output reg csr_imm_sel,
+    output reg wb_is_csr
 );
     wire [2:0] funct3 = inst[14:12];
     wire [6:0] opcode = inst[6:0];
     wire [6:0] funct7 = inst[31:25];
+    wire [4:0] rs1_uimm = inst[19:15]; // Extracted rs1/zimm field for CSR check
 
     always @(*) begin
         // Default values to ensure no latches are inferred
@@ -25,6 +32,12 @@ module control(
         bsel_ctrl = 0;        regwrite_ctrl = 2'b00;
         alu_ctrl = 4'b0000;   memstore_ctrl = 4'b0000;
         memload_ctrl = 3'b000; branchcond_ctrl = 3'b000; trap_en=0;
+
+        //CSR Defaults
+        csr_we = 0;
+        csr_op = 2'b00;
+        csr_imm_sel = 0;
+        wb_is_csr = 0;
 
         case (opcode)
             7'b0000011: begin // Load
@@ -82,8 +95,23 @@ module control(
                 jalr_ctrl = 1;
                 bsel_ctrl = 1;
             end
-            7'b1110011: begin // ECALL, EBREAK
-                trap_en = (funct3 == 3'b000)? 1 : 0 ;
+            7'b1110011: begin // ECALL, EBREAK, CSR
+                if (funct3 == 3'b000) begin
+                    trap_en = 1; // ECALL or EBREAK
+                end else begin
+                    // CSR 
+                    csr_op = funct3[1:0];      // Maps to 01=W, 10=S, 11=C
+                    csr_imm_sel = funct3[2];   // 0 = use rs1, 1 = use zimm
+                    wb_is_csr = 1;             // Tell WB stage to use CSR data
+                    regwrite_en = 1;           // Tell integer regfile to save the old CSR data
+                    
+                    // --- THE FIX ---
+                    // Only assert csr_we if it's a CSRRW/CSRRWI (01) 
+                    // OR if rs1/zimm is not zero (avoids side-effects on read-only calls)
+                    if (funct3[1:0] == 2'b01 || rs1_uimm != 5'b00000) begin
+                        csr_we = 1;
+                    end
+                end
             end
         endcase
     end
