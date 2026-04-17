@@ -21,17 +21,9 @@ module MEM_WB(
     input [1:0]  mem_regwrite_ctrl,
 
     output reg        wb_regwrite_en,
-    output reg [1:0]  wb_regwrite_ctrl,
-
-    // --- NEW CSR INPUTS ---
-    input wire mem_wb_is_csr,
-    input wire [31:0] mem_csr_rdata,
-
-    // --- NEW CSR OUTPUTS ---
-    output reg wb_wb_is_csr,
-    output reg [31:0] wb_csr_rdata
+    output reg [1:0]  wb_regwrite_ctrl
 );
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             // Data
             wb_alu_out       <= 32'b0;
@@ -42,9 +34,6 @@ module MEM_WB(
             // Control
             wb_regwrite_en   <= 1'b0;
             wb_regwrite_ctrl <= 2'b0;
-
-            wb_wb_is_csr <= 1'b0;
-            wb_csr_rdata <= 32'b0;
         end
         else begin
             // Data
@@ -56,9 +45,6 @@ module MEM_WB(
             // Control
             wb_regwrite_en   <= mem_regwrite_en;
             wb_regwrite_ctrl <= mem_regwrite_ctrl;
-
-            wb_wb_is_csr <= mem_wb_is_csr;
-            wb_csr_rdata <= mem_csr_rdata;
         end
     end
 endmodule
