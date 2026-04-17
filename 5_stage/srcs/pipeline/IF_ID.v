@@ -13,7 +13,7 @@ module IF_ID (
     output reg [31:0] id_pc_plus_4
 );
 
-    always @(posedge clk or posedge rst) begin
+    always @(posedge clk) begin
         if (rst) begin
             id_inst      <= `RV32_NOP;
             id_pc        <= 32'b0;
