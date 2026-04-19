@@ -17,8 +17,7 @@ module imem(
     end
 
     initial begin
-        //preload the memory with the program.mem file (change as per your path, you don' have a user named mayan bruh!)
-        $readmemh("C:/Users/mayan/Desktop/RV32I_core/5_stage/software/program.mem", mem);
+        $readmemh("./software/program.mem", mem);
     end
 
 endmodule

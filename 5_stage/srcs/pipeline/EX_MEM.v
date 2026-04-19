@@ -33,46 +33,62 @@ module EX_MEM(
     output reg        mem_regwrite_en,
     output reg [1:0]  mem_regwrite_ctrl,
 
-    // --- NEW CSR INPUTS ---
-    input wire ex_wb_is_csr,
+    // --- CSR INPUTS ---
+    input wire        ex_wb_is_csr,
     input wire [31:0] ex_csr_rdata,
 
-    // --- NEW CSR OUTPUTS ---
-    output reg mem_wb_is_csr,
+    // --- CSR OUTPUTS ---
+    output reg        mem_wb_is_csr,
     output reg [31:0] mem_csr_rdata
 );
-    always @(posedge clk or posedge rst) begin
-        if (rst || flush) begin
-            // Data
+
+    always @(posedge clk) begin
+        if (rst) begin
             mem_alu_out      <= 32'b0;
             mem_rs2_data     <= 32'b0;
             mem_pc_plus_4    <= 32'b0;
             mem_imm          <= 32'b0;
             mem_rd           <= 5'b0;
-            // Control – MEM
+
             mem_memwrite_en  <= 1'b0;
             mem_memstore_ctrl <= 4'b0;
             mem_memload_ctrl <= 3'b0;
-            // Control – WB
+
             mem_regwrite_en  <= 1'b0;
             mem_regwrite_ctrl <= 2'b0;
 
             mem_wb_is_csr <= 1'b0;
             mem_csr_rdata <= 32'b0;
-        end
-        else begin
-            // Data
-            mem_alu_out      <= ex_alu_out;
-            mem_rs2_data     <= ex_rs2_data;
-            mem_pc_plus_4    <= ex_pc_plus_4;
-            mem_imm          <= ex_imm;
-            mem_rd           <= ex_rd;
-            // Control – MEM
-            mem_memwrite_en  <= ex_memwrite_en;
+            
+        end else if (flush) begin
+            mem_memwrite_en <= 1'b0;
+            mem_regwrite_en <= 1'b0;
+            mem_wb_is_csr   <= 1'b0;
+
+            // Let datapath and non-destructive control signals flow through
+            mem_alu_out       <= ex_alu_out;
+            mem_rs2_data      <= ex_rs2_data;
+            mem_pc_plus_4     <= ex_pc_plus_4;
+            mem_imm           <= ex_imm;
+            mem_rd            <= ex_rd;
             mem_memstore_ctrl <= ex_memstore_ctrl;
-            mem_memload_ctrl <= ex_memload_ctrl;
-            // Control – WB
-            mem_regwrite_en  <= ex_regwrite_en;
+            mem_memload_ctrl  <= ex_memload_ctrl;
+            mem_regwrite_ctrl <= ex_regwrite_ctrl;
+            mem_csr_rdata     <= ex_csr_rdata;
+
+        end else begin
+            // Normal pipeline progression
+            mem_alu_out       <= ex_alu_out;
+            mem_rs2_data      <= ex_rs2_data;
+            mem_pc_plus_4     <= ex_pc_plus_4;
+            mem_imm           <= ex_imm;
+            mem_rd            <= ex_rd;
+            
+            mem_memwrite_en   <= ex_memwrite_en;
+            mem_memstore_ctrl <= ex_memstore_ctrl;
+            mem_memload_ctrl  <= ex_memload_ctrl;
+            
+            mem_regwrite_en   <= ex_regwrite_en;
             mem_regwrite_ctrl <= ex_regwrite_ctrl;
 
             mem_wb_is_csr <= ex_wb_is_csr;
