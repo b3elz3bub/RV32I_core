@@ -1,11 +1,12 @@
 #!/bin/bash
-# RISC-V build script for Windows/Git Bash: .c + start.s -> program.mem
+# RISC-V build script: .c + start.s -> program.mem
 
 set -e
 
 # ── Config ────────────────────────────────────────────────
 ASM="./software/start.s"
 OUT_DIR="./software"
+TMPDIR="$(mktemp -d /tmp/riscv_build_XXXXXX)"
 # ──────────────────────────────────────────────────────────
 
 usage() {
@@ -21,31 +22,26 @@ C_FILE="$1"
 [ ! -f "$ASM" ]     && { echo "Error: Assembly file '$ASM' not found."; exit 1; }
 
 BASENAME=$(basename "$C_FILE" .c)
-ELF="${BASENAME}_temp.elf"
-BIN="${BASENAME}_temp.bin"
+ELF="$TMPDIR/${BASENAME}.elf"
+BIN="$TMPDIR/${BASENAME}.bin"
 MEM="$OUT_DIR/program.mem"
 
 echo "[ 1/4 ] Compiling:  $C_FILE + $ASM"
-# Updated to xPack compiler name: riscv-none-elf-gcc
-# Updated Compilation Line inside your script
-riscv-none-elf-gcc \
+riscv64-unknown-elf-gcc \
     -march=rv32i -mabi=ilp32 \
     -static -nostdlib \
-    -O2 \
     -Ttext 0x0 \
     "$ASM" "$C_FILE" \
     -o "$ELF"
 
 echo "[ 2/4 ] Objcopy:    $ELF -> $BIN"
-# Updated to xPack objcopy
-riscv-none-elf-objcopy -O binary "$ELF" "$BIN"
+riscv64-unknown-elf-objcopy -O binary "$ELF" "$BIN"
 
 echo "[ 3/4 ] Generating: $MEM"
-# od and awk extract the raw 32-bit hex values for Vivado
 od -v -t x4 "$BIN" | awk '{for(i=2;i<=NF;i++) print $i}' > "$MEM"
 
-echo "[ 4/4 ] Cleaning up temporary files..."
-rm -f "$ELF" "$BIN"
+echo "[ 4/4 ] Cleaning up tmp: $TMPDIR"
+rm -rf "$TMPDIR"
 
 echo ""
 echo "Done! Output: $MEM"

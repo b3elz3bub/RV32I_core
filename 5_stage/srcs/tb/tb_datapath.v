@@ -74,7 +74,7 @@ module tb_datapath();
         rst = 1'b0;
 
         // 5. Let it run for 100 clock cycles (adjust as needed for your program)
-        repeat(100) @(posedge clk);
+        repeat(3000) @(posedge clk);
 
         $display("[%0t] Simulation complete.", $time);
         $finish;
