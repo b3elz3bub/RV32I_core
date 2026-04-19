@@ -163,10 +163,11 @@ module datapath(
         .pc_out(if_pc)
     );
 
+    wire [31:0] imem_pc_in = pc_stall ? if_pc_aligned : if_pc;
 
     imem imem_inst(
         .clk(clk),
-        .pc(if_pc),
+        .pc(imem_pc_in),
         .inst(if_inst),
         .load(uart_load),
         .addr(imem_addr),
