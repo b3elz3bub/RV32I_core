@@ -12,12 +12,10 @@ read_verilog ./include/params.vh
 set_property is_global_include true [get_files ./include/params.vh]
 
 read_verilog [glob ./srcs/core/*.v]
+read_verilog [glob ./srcs/csr/*.v]
+read_verilog [glob ./srcs/memory/*.v]
+read_verilog [glob ./srcs/peripherals/*.v]
 read_verilog [glob ./srcs/pipeline/*.v]  
-read_verilog [glob ./srcs/memory/*.v]
-read_verilog [glob ./srcs/top/*.v]
-
-read_verilog [glob ./srcs/core/*.v]
-read_verilog [glob ./srcs/memory/*.v]
 read_verilog [glob ./srcs/top/*.v]
 
 # --- 2. Read Constraints ---
@@ -25,11 +23,13 @@ read_xdc ./constraints/zedboard.xdc
 
 # --- 3. In-Memory IP Generation ---
 create_ip -name clk_wiz -vendor xilinx.com -library ip -version 6.0 -module_name clk_wiz_0 -dir $output_dir/ip
-
-# Explicitly define the 100MHz input and 300MHz output
 set_property -dict [list \
-  CONFIG.PRIM_IN_FREQ {100.000} \
-  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {300.000} \
+  CONFIG.CLKOUT1_JITTER {290.478} \
+  CONFIG.CLKOUT1_PHASE_ERROR {133.882} \
+  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {75.000} \
+  CONFIG.MMCM_CLKFBOUT_MULT_F {15.625} \
+  CONFIG.MMCM_CLKOUT0_DIVIDE_F {78.125} \
+  CONFIG.MMCM_DIVCLK_DIVIDE {2} \
 ] [get_ips clk_wiz_0]
 
 # Synthesize the IP Out-Of-Context
@@ -43,6 +43,7 @@ synth_design -top top -part xc7z020clg484-1
 opt_design
 place_design
 route_design
+report_timing_summary -delay_type min_max -report_unconstrained -max_paths 10 -input_pins -file post_route_timing.rpt
+puts "BUILD COMPLETE! Check post_route_timing.rpt for your WNS."
 write_bitstream -force $output_dir/zedboard_riscv.bit
-
 puts "Build complete. Bitstream is located at: $output_dir/zedboard_riscv.bit"

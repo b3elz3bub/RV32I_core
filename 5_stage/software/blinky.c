@@ -2,7 +2,7 @@
 
 void Order(int n) {
     *LED += n;          
-    for(volatile int i = 0; i < 5; i++); // 'volatile' prevents GCC deletion
+    for(volatile int i = 0; i < 2500000; i++); // 'volatile' prevents GCC deletion
     *LED -= n;
 } 
 

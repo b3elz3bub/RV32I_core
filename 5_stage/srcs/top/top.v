@@ -81,9 +81,7 @@ module top(
 
     assign ld[0] = locked;               // Status: PLL Locked
     assign ld[7] = heartbeat_cnt[23];    // Status: CPU Clocking
-    assign ld[6] = uart_dma_toggle;      // Status: UART DMA mode enabled
-    assign ld[5] = uart_addr_captured;   // Status: DMA start address latched
-    assign ld[4:1] = cpu_led_out[4:1];   // Software: Bits 1-4
+    assign ld[6:1] = cpu_led_out[6:1];   // Software: Bits 1-4
 
     always @(posedge cpu_clk) begin
         if (rst_btn) heartbeat_cnt <= 0;
