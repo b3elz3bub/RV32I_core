@@ -59,16 +59,16 @@ module top(
     );
 
     // 2. Pipelined CPU Core
-    //    Control unit is now INSIDE the datapath (decoded in ID stage,
-    //    control signals pipelined through ID/EX, EX/MEM, MEM/WB).
+    //    timer_irq is generated inside system_bus (which is inside the datapath)
+    //    and fed back into the CSR file — all internal wiring.
     datapath cpu_core (
         .clk(cpu_clk),
-        .rst(~locked || rst_btn),
+        .rst(~locked || rst_btn || uart_dma_toggle),
         .leds(cpu_led_out),
         .switches(sw),
-        .uart_load(uart_imem_load),
-        .uart_data(uart_imem_data),
-        .imem_addr(uart_imem_addr),
+        .dma_load(uart_imem_load),
+        .dma_data(uart_imem_data),
+        .dma_addr(uart_imem_addr),
         .uart_addr(uart_addr),
         .uart_write_data(uart_write_data),
         .uart_write_en(uart_write_en),

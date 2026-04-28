@@ -1,11 +1,12 @@
+`include "params.vh"
 module datapath(
     input clk,
     input rst,
 
-    // UART loader
-    input uart_load,
-    input [31:0] uart_data,
-    input [31:0] imem_addr,
+    // DMA loader
+    input dma_load,
+    input [31:0] dma_data,
+    input [31:0] dma_addr,
 
     // UART MMIO peripheral bridge
     output [31:0] uart_addr,
@@ -47,6 +48,7 @@ module datapath(
     wire        id_regwrite_en;
     wire [1:0]  id_regwrite_ctrl;
     wire        id_trap_en;
+    wire        id_mret_en;
 
     // --- CSR WIRES (ID) ---
     wire        id_csr_we, id_csr_imm_sel, id_wb_is_csr;
@@ -70,17 +72,17 @@ module datapath(
     wire        ex_csr_we, ex_csr_imm_sel, ex_wb_is_csr;
     wire [1:0]  ex_csr_op;
     wire [11:0] ex_csr_addr;
+    wire        ex_mret_en;
 
     // --- EX (ALU + branch resolution) ---
     wire [31:0] alu_out;
-    wire        zero_flag, alu_lt_u, alu_lt_s; // Added alu_lt_s from Mod 2
+    wire        zero_flag, alu_lt_u, alu_lt_s;
     reg  [31:0] alu_a, alu_b;
     wire [31:0] ex_forward_rs1, ex_forward_rs2;
     wire [31:0] branch_target, jalr_target;
-    wire [1:0]  pc_sel;
+    wire [2:0]  pc_sel;
     reg         branch_cond;
     
-    // Timing optimization from Mod 2
     (* max_fanout = 32 *) wire pipeline_flush;
 
     // --- EX/MEM outputs ---
@@ -120,8 +122,13 @@ module datapath(
     wire        pc_stall, if_id_stall, id_ex_bubble;
     wire [1:0]  forward_a_sel, forward_b_sel;
 
+    // --- Interrupt / Trap wires ---
+    wire        take_interrupt;     // from CSR: global & timer enabled & pending
+    wire [31:0] mtvec_out, mepc_out;
+    wire        bus_timer_irq;      // from system_bus
+
     // =========================================================================
-    //  PARALLEL VALID & TRAP PIPELINE (Critical for MMIO & accurate instret)
+    //  PARALLEL VALID & TRAP PIPELINE
     // =========================================================================
     wire if_valid = 1'b1; 
     reg  id_valid, ex_valid, mem_valid, wb_valid;
@@ -152,6 +159,22 @@ module datapath(
     end
 
     // =========================================================================
+    //  INTERRUPT INJECTION LOGIC
+    // =========================================================================
+    // Guard: don't inject an interrupt if EX already has a control-flow change
+    // (branch/jal/jalr/ecall/mret) — those take priority. This avoids a
+    // combinational loop through pipeline_flush → csr_trap_en → interrupt_inject.
+    wire ex_has_cf_change = ex_trap_en | ex_mret_en | ex_jal_ctrl | ex_jalr_ctrl | ex_branch_en;
+    
+    wire interrupt_inject = take_interrupt & ex_valid & ~ex_has_cf_change;
+
+    // Unified trap signal to CSR file — covers both ecall and hardware interrupt
+    wire csr_trap_en    = ex_trap_en | interrupt_inject;
+    wire [31:0] csr_trap_pc    = ex_pc;  // PC of instruction in EX stage
+    wire [31:0] csr_trap_cause = ex_trap_en ? 32'd11 :      // ecall from M-mode
+                                 {1'b1, 31'd7};              // machine timer interrupt (async, code 7)
+
+    // =========================================================================
     //  IF — Instruction Fetch
     // =========================================================================
 
@@ -169,25 +192,20 @@ module datapath(
         .clk(clk),
         .pc(imem_pc_in),
         .inst(if_inst),
-        .load(uart_load),
-        .addr(imem_addr),
-        .data(uart_data)
+        .load(dma_load),
+        .addr(dma_addr),
+        .data(dma_data)
     );
-    // PC mux — branch/jump targets come from EX (combinational, no register)
-    // ┌─────────────────────────────────────────────────────────────────────┐
-    // │ TOURNAMENT PREDICTOR HOOK                                           │
-    // │ Replace "always not taken" with predictor output:                   │
-    // │   - predictor provides: predicted_taken, predicted_target           │
-    // │   - if predicted_taken: pc_next = predicted_target                  │
-    // │   - carry prediction through IF/ID, ID/EX for misprediction check   │
-    // │   - on mispredict in EX: flush + correct pc_next                    │
-    // └─────────────────────────────────────────────────────────────────────┘
+
+    // PC mux — expanded for trap entry (mtvec) and mret (mepc)
     always @(*) begin
         case (pc_sel)
-            2'b00:   pc_next = if_pc_plus_4;     // default: not-taken prediction
-            2'b01:   pc_next = branch_target;    // taken branch
-            2'b10:   pc_next = jalr_target;      // JALR
-            default: pc_next = if_pc_plus_4;
+            `PC_SEL_PLUS4:  pc_next = if_pc_plus_4;
+            `PC_SEL_BRANCH: pc_next = branch_target;
+            `PC_SEL_JALR:   pc_next = jalr_target;
+            `PC_SEL_MTVEC:  pc_next = mtvec_out;       // trap/interrupt entry
+            `PC_SEL_MEPC:   pc_next = mepc_out;         // mret return
+            default:        pc_next = if_pc_plus_4;
         endcase
     end
 
@@ -243,6 +261,7 @@ module datapath(
         .jal_ctrl(id_jal_ctrl),
         .jalr_ctrl(id_jalr_ctrl),
         .trap_en(id_trap_en),
+        .mret_en(id_mret_en),
 
         .csr_we(id_csr_we),
         .csr_op(id_csr_op),
@@ -313,11 +332,14 @@ module datapath(
         .id_wb_is_csr(id_wb_is_csr), .id_csr_addr(id_csr_addr),
         
         .ex_csr_we(ex_csr_we), .ex_csr_op(ex_csr_op), .ex_csr_imm_sel(ex_csr_imm_sel), 
-        .ex_wb_is_csr(ex_wb_is_csr), .ex_csr_addr(ex_csr_addr)
+        .ex_wb_is_csr(ex_wb_is_csr), .ex_csr_addr(ex_csr_addr),
+
+        .id_mret_en(id_mret_en),
+        .ex_mret_en(ex_mret_en)
     );
 
     // =========================================================================
-    //  EX — Execute (ALU + Fast Branch Resolution)
+    //  EX — Execute (ALU + Branch + Trap/Interrupt Resolution)
     // =========================================================================
 
     forwarding_unit fwd_inst(
@@ -357,13 +379,13 @@ module datapath(
         .rslt(alu_out),
         .zero_flag(zero_flag),
         .lt_u(alu_lt_u),
-        .lt_s(alu_lt_s) // Included from Mod 2 logic
+        .lt_s(alu_lt_s)
     );
 
     assign branch_target = ex_pc + ex_imm;
     assign jalr_target   = {alu_out[31:1], 1'b0};
 
-    // --- Fast Branch Comparator (From Mod 2 - Timing Critical Fix) ---
+    // --- Fast Branch Comparator ---
     wire branch_eq   = (ex_forward_rs1 == ex_forward_rs2);
     wire branch_lt_s = ($signed(ex_forward_rs1) < $signed(ex_forward_rs2));
     wire branch_lt_u = (ex_forward_rs1 < ex_forward_rs2);
@@ -380,14 +402,25 @@ module datapath(
         endcase
     end
 
-    assign pc_sel[1] = ex_jalr_ctrl;
-    assign pc_sel[0] = ex_jal_ctrl | (ex_branch_en & branch_cond);
-    assign pipeline_flush = (pc_sel != 2'b00);
+    // --- PC Select (expanded to 3 bits) ---
+    // Priority: interrupt/trap > mret > jalr > branch/jal > PC+4
+    wire branch_taken = ex_branch_en & branch_cond;
 
-    // --- CSR Execution (From Mod 1) ---
+    assign pc_sel = (csr_trap_en)   ? `PC_SEL_MTVEC  :   // trap/interrupt → mtvec
+                    (ex_mret_en)    ? `PC_SEL_MEPC   :   // mret → mepc
+                    (ex_jalr_ctrl)  ? `PC_SEL_JALR   :   // JALR
+                    (ex_jal_ctrl | branch_taken) ? `PC_SEL_BRANCH :  // JAL / taken branch
+                    `PC_SEL_PLUS4;                        // default
+
+    assign pipeline_flush = (pc_sel != `PC_SEL_PLUS4);
+
+    // --- CSR Unit ---
     wire [31:0] csr_zimm = {27'b0, ex_rs1_addr}; 
     wire [31:0] csr_wdata = ex_csr_imm_sel ? csr_zimm : ex_forward_rs1;
     wire [31:0] ex_csr_rdata;
+
+    // Suppress CSR software write if we are also taking an interrupt/trap this cycle
+    wire csr_we_effective = ex_csr_we & ~csr_trap_en & ~interrupt_inject;
 
     csr_file my_csr_unit (
         .clk(clk),
@@ -395,12 +428,25 @@ module datapath(
         .csr_addr(ex_csr_addr),
         .wdata(csr_wdata),
         .csr_op(ex_csr_op),
-        .csr_we(ex_csr_we),
+        .csr_we(csr_we_effective),
         .rdata(ex_csr_rdata),
         .inst_retire(wb_valid),
-        .trap_en(ex_trap_en),
-        .trap_pc(ex_pc),
-        .trap_cause(32'd11) 
+
+        // Trap interface
+        .trap_en(csr_trap_en),
+        .trap_pc(csr_trap_pc),
+        .trap_cause(csr_trap_cause),
+
+        // MRET interface
+        .mret_en(ex_mret_en),
+
+        // External interrupt
+        .timer_irq(bus_timer_irq),
+
+        // Outputs
+        .take_interrupt(take_interrupt),
+        .mtvec_out(mtvec_out),
+        .mepc_out(mepc_out)
     );
 
     // =========================================================================
@@ -443,11 +489,11 @@ module datapath(
         endcase
     end
 
-    // Protect against speculative MMIO reads causing state-loss (From Mod 1)
     assign mem_read_en = mem_valid && (mem_regwrite_ctrl == 2'b01);
 
     system_bus system_bus_inst(
         .clk(clk),
+        .rst(rst),
         .byte_en(byte_en),
         .addr(mem_alu_out),
         .write_data(store_data),
@@ -460,7 +506,8 @@ module datapath(
         .uart_write_data(uart_write_data),
         .uart_write_en(uart_write_en),
         .uart_read_en(uart_read_en),
-        .uart_read_data(uart_read_data)
+        .uart_read_data(uart_read_data),
+        .timer_irq(bus_timer_irq)
     );
 
     loadext loadext_inst(

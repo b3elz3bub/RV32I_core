@@ -13,6 +13,7 @@ module control(
     output reg jal_ctrl,
     output reg jalr_ctrl,
     output reg trap_en,
+    output reg mret_en,
 
     // CSR
     output reg csr_we,
@@ -32,6 +33,7 @@ module control(
         bsel_ctrl = 0;        regwrite_ctrl = 2'b00;
         alu_ctrl = 4'b0000;   memstore_ctrl = 4'b0000;
         memload_ctrl = 3'b000; branchcond_ctrl = 3'b000; trap_en=0;
+        mret_en = 0;
 
         //CSR Defaults
         csr_we = 0;
@@ -95,9 +97,13 @@ module control(
                 jalr_ctrl = 1;
                 bsel_ctrl = 1;
             end
-            7'b1110011: begin // ECALL, EBREAK, CSR
+            7'b1110011: begin // ECALL, EBREAK, MRET, CSR
                 if (funct3 == 3'b000) begin
-                    trap_en = 1; // ECALL or EBREAK
+                    // Distinguish ECALL/EBREAK from MRET by inst[31:20]
+                    if (inst[31:20] == 12'h302)
+                        mret_en = 1;      // MRET: return from trap handler
+                    else
+                        trap_en = 1;      // ECALL or EBREAK
                 end else begin
                     // CSR 
                     csr_op = funct3[1:0];      // Maps to 01=W, 10=S, 11=C

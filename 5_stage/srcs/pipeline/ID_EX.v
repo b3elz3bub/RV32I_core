@@ -60,7 +60,11 @@ module ID_EX(
     output reg [1:0]  ex_csr_op,
     output reg        ex_csr_imm_sel,
     output reg        ex_wb_is_csr,
-    output reg [11:0] ex_csr_addr
+    output reg [11:0] ex_csr_addr,
+
+    // ── Trap / MRET ──
+    input        id_mret_en,
+    output reg   ex_mret_en
 );
 
     always @(posedge clk) begin
@@ -78,6 +82,8 @@ module ID_EX(
             ex_csr_we <= 0; ex_csr_op <= 0; ex_csr_imm_sel <= 0;
             ex_wb_is_csr <= 0; ex_csr_addr <= 0;
 
+            ex_mret_en <= 0;
+
         end else if (flush) begin
             ex_regwrite_en <= 1'b0;
             ex_memwrite_en <= 1'b0;
@@ -85,6 +91,7 @@ module ID_EX(
             ex_jal_ctrl    <= 1'b0;
             ex_jalr_ctrl   <= 1'b0;
             ex_csr_we      <= 1'b0;
+            ex_mret_en     <= 1'b0;
 
             ex_rs1_data  <= id_rs1_data;
             ex_rs2_data  <= id_rs2_data;
@@ -139,6 +146,8 @@ module ID_EX(
             ex_csr_imm_sel <= id_csr_imm_sel;
             ex_wb_is_csr   <= id_wb_is_csr;
             ex_csr_addr    <= id_csr_addr;
+
+            ex_mret_en     <= id_mret_en;
         end
         // Implicit else: if (stall), hold current state (all registers maintain current values)
     end

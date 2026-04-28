@@ -1,5 +1,5 @@
-#define LED ((volatile unsigned int*)0x00001000)
-#define SWITCH ((volatile unsigned int*)0x00002000)
+#define LED ((volatile unsigned int*)0x80000000)
+#define SWITCH ((volatile unsigned int*)0x80000004)
 
 int main() {
     
