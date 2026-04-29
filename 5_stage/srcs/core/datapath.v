@@ -456,7 +456,7 @@ module datapath(
     EX_MEM ex_mem_reg(
         .clk(clk),
         .rst(rst),
-        .flush(1'b0),
+        .flush(csr_trap_en),
         .ex_alu_out(alu_out), .ex_rs2_data(ex_forward_rs2), .ex_pc_plus_4(ex_pc_plus_4),
         .ex_imm(ex_imm), .ex_rd(ex_rd),
 
