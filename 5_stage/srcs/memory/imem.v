@@ -8,16 +8,16 @@ module imem(
     input [31:0] data,
     input [31:0] addr
 );
-    reg [31:0] mem [0:4095]; //16KB memory (4096 words)
+    reg [31:0] mem [0:65535];//16KB memory (65536 words)
     always @(posedge clk) begin
         if (load) begin
-            mem[addr[13:2]] <= data;
+            mem[addr[15:2]] <= data;
         end
-        inst <= mem[pc[13:2]];
+        inst <= mem[pc[17:2]];
     end
 
-    initial begin
-        $readmemh("./software/program.mem", mem);
-    end
+    //initial begin
+    //    $readmemh("./software/program.mem", mem);
+    //end
 
 endmodule

@@ -20,7 +20,12 @@ module alu(
             3'b010: rslt = ($signed(a) < $signed(b)) ? 32'b1 : 32'b0;            // SLT
             3'b011: rslt = (a < b) ? 32'b1 : 32'b0;                              // SLTU
             3'b100: rslt = a ^ b;                                                // XOR
-            3'b101: rslt = (alu_ctrl[0] == 1) ? $signed(a) >>> b[4:0] : a >> b[4:0]; // (SRL,SRA)
+            3'b101: begin
+                if (alu_ctrl[0]) // Arithmetic Shift Right (SRA, SRAI)
+                    rslt = $signed(a) >>> b[4:0];
+                else             // Logical Shift Right (SRL, SRLI)
+                    rslt = a >> b[4:0];
+            end // (SRL,SRA)
             3'b110: rslt = a | b;                                                // OR
             3'b111: rslt = a & b;                                                // AND
         endcase

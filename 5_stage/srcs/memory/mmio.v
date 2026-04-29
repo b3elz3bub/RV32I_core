@@ -36,15 +36,15 @@ module system_bus(
 
    // ── Address Decode ──
     // Shift the RAM decode up to 0x4000. 8KB space: 0x4000 -> 0x5FFF
-    wire is_ram    = (addr >= 32'h00040000 && addr < 32'h00042000); 
+    wire is_ram    = (addr >= 32'h00040000 && addr < 32'h00050000); 
     
-    wire is_led    = (addr == ADDR_LED);                   
-    wire is_switch = (addr == ADDR_SW);                    
-    wire is_uart   = (addr == ADDR_UART_DATA) || (addr == ADDR_UART_STAT);
+    wire is_led    = (addr == `ADDR_LED);                   
+    wire is_switch = (addr == `ADDR_SW);                    
+    wire is_uart   = (addr == `ADDR_UART_DATA) || (addr == `ADDR_UART_STAT);
     wire is_timer  = (addr[31:4] == 28'h8000200);           
     
-    // Update tohost trap
-    wire is_tohost = (addr == 32'h00042000);
+    // 2. Move tohost to match Linker/Macro/Sail (0x50000)
+    wire is_tohost = (addr == 32'h00050000);
 
     
     wire [31:0] ram_read_data;
@@ -101,13 +101,14 @@ module system_bus(
         else if (write_en && is_led)
             leds <= write_data[7:0];
     end
+    // Inside system_bus.v
     always @(posedge clk) begin
         if (rst) begin
-            tohost       <= 0;
             tohost_valid <= 0;
-        end else if (write_en && is_tohost) begin
-            tohost       <= write_data;
+        end else if (write_en && write_data == 32'h1) begin 
+            // If the CPU writes a '1' anywhere, stop the sim!
             tohost_valid <= 1;
+            tohost <= write_data;
         end
     end
 endmodule

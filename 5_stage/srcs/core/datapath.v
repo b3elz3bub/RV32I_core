@@ -15,6 +15,10 @@ module datapath(
     output uart_read_en,
     input [31:0] uart_read_data,
 
+    //To Host
+    output [31:0] tohost,
+    output        tohost_valid,
+
     // IO
     output [7:0] leds,
     input  [7:0] switches
@@ -304,7 +308,7 @@ module datapath(
     ID_EX id_ex_reg(
         .clk(clk),
         .rst(rst),
-        .flush(pipeline_flush || id_ex_bubble),
+        .flush(pipeline_flush || pipeline_flush_d1 || id_ex_bubble),
         .stall(1'b0),
         .id_rs1_data(id_rs1_data), .id_rs2_data(id_rs2_data), .id_imm(id_imm),
         .id_pc(id_pc), .id_pc_plus_4(id_pc_plus_4), .id_rd(id_rd),
@@ -507,7 +511,9 @@ module datapath(
         .uart_write_en(uart_write_en),
         .uart_read_en(uart_read_en),
         .uart_read_data(uart_read_data),
-        .timer_irq(bus_timer_irq)
+        .timer_irq(bus_timer_irq),
+        .tohost(tohost),
+        .tohost_valid(tohost_valid)
     );
 
     loadext loadext_inst(

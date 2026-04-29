@@ -4,31 +4,31 @@ module csr_file (
     input wire rst,
     
     // --- Software (Instruction) Ports ---
-    input wire [11:0] csr_addr,   // 12-bit CSR address from instr[31:20]
-    input wire [31:0] wdata,      // Data to write (from rs1 or zimm)
-    input wire [1:0]  csr_op,     // Operation: 01=Write, 10=Set, 11=Clear
-    input wire        csr_we,     // Write Enable from control unit
-    output reg [31:0] rdata,      // Data read from CSR, goes to Write-Back stage
+    input wire [11:0] csr_addr,   
+    input wire [31:0] wdata,      
+    input wire [1:0]  csr_op,     
+    input wire        csr_we,     
+    output reg [31:0] rdata,      
     
-    input wire        inst_retire,// High when a valid instruction finishes WB stage
+    input wire        inst_retire,
 
     // --- Hardware Trap Ports ---
-    input wire        trap_en,    // High when an exception/ECALL occurs (from pipeline)
-    input wire [31:0] trap_pc,    // The PC of the trapping instruction
-    input wire [31:0] trap_cause, // The exception code
+    input wire        trap_en,    
+    input wire [31:0] trap_pc,    
+    input wire [31:0] trap_cause, 
 
     // --- MRET Port ---
-    input wire        mret_en,    // High when MRET instruction executes
+    input wire        mret_en,    
 
     // --- External Interrupt Inputs ---
-    input wire        timer_irq,  // From timer peripheral (level-triggered)
+    input wire        timer_irq,  
 
     // --- Interrupt Decision Output ---
-    output wire       take_interrupt, // To datapath: redirect PC to mtvec NOW
+    output wire       take_interrupt, 
 
     // --- PC Redirect Outputs ---
-    output wire [31:0] mtvec_out, // Trap vector base address
-    output wire [31:0] mepc_out   // Return address for MRET
+    output wire [31:0] mtvec_out, 
+    output wire [31:0] mepc_out   
 );
 
     // =====================================================================
@@ -36,71 +36,28 @@ module csr_file (
     // =====================================================================
     reg [63:0] cycle_cnt;
     reg [63:0] instret_cnt;
-    reg [31:0] mstatus;    // [3]=MIE (global interrupt enable), [7]=MPIE (previous MIE)
-    reg [31:0] mie;        // [7]=MTIE (machine timer interrupt enable)
+    reg [31:0] mstatus;    
+    reg [31:0] mie;        
     reg [31:0] mtvec;
     reg [31:0] mscratch;
     reg [31:0] mepc;
     reg [31:0] mcause;
 
-    // mip is partially hardwired — bit 7 (MTIP) reflects the timer_irq line
     wire [31:0] mip = {24'b0, timer_irq, 7'b0};  // bit 7 = MTIP
 
     // =====================================================================
     //  Interrupt Decision
     // =====================================================================
-    // Take an interrupt when: global interrupts enabled AND timer interrupt
-    // is both enabled AND pending.
-    // This is a level signal — the datapath samples it once to inject the trap.
-    assign take_interrupt = mstatus[3]    // MIE — global enable
-                          & mie[7]        // MTIE — timer interrupt enable
-                          & mip[7];       // MTIP — timer interrupt pending
+    assign take_interrupt = mstatus[3]    // MIE 
+                          & mie[7]        // MTIE 
+                          & mip[7];       // MTIP 
 
-    // =====================================================================
-    //  Direct Outputs
-    // =====================================================================
     assign mtvec_out = mtvec;
     assign mepc_out  = mepc;
 
     // =====================================================================
-    //  CSR Read Mux (combinational)
+    //  Helper Function: Apply CSR Operations
     // =====================================================================
-    always @(*) begin
-        case (csr_addr)
-            // Performance counters (M-mode + U-mode aliases)
-            `CSR_MCYCLE,   `CSR_CYCLE:    rdata = cycle_cnt[31:0];
-            `CSR_MCYCLEH,  `CSR_CYCLEH:   rdata = cycle_cnt[63:32];
-            `CSR_MINSTRET, `CSR_INSTRET:  rdata = instret_cnt[31:0];
-            `CSR_MINSTRETH,`CSR_INSTRETH: rdata = instret_cnt[63:32];
-            
-            // Machine-mode trap CSRs
-            `CSR_MSTATUS:  rdata = mstatus;
-            `CSR_MIE:      rdata = mie;
-            `CSR_MTVEC:    rdata = mtvec;
-            `CSR_MSCRATCH: rdata = mscratch;
-            `CSR_MEPC:     rdata = mepc;
-            `CSR_MCAUSE:   rdata = mcause;
-            `CSR_MIP:      rdata = mip;       // Read-only (hardwired to timer_irq)
-            default:       rdata = 32'b0;
-        endcase
-    end
-
-    // =====================================================================
-    //  CSR Write Logic (sequential)
-    // =====================================================================
-    // Priority: reset > hardware trap > mret > software CSR instruction
-    //
-    // On trap entry (trap_en OR take_interrupt triggers this via the datapath):
-    //   mepc   ← trap_pc (PC of interrupted/faulting instruction)
-    //   mcause ← trap_cause
-    //   mstatus.MPIE ← mstatus.MIE  (save current interrupt state)
-    //   mstatus.MIE  ← 0            (disable interrupts in handler)
-    //
-    // On mret:
-    //   mstatus.MIE  ← mstatus.MPIE (restore interrupt state)
-    //   mstatus.MPIE ← 1
-
-    // Helper: apply CSR write/set/clear operation
     function [31:0] csr_apply;
         input [31:0] old_val;
         input [31:0] new_val;
@@ -115,11 +72,49 @@ module csr_file (
         end
     endfunction
 
+    // =====================================================================
+    //  CSR Read Mux (Combinational + Internal Bypass Hazard Fix)
+    // =====================================================================
+    always @(*) begin
+        // 1. Fetch the actual register values
+        case (csr_addr)
+            `CSR_MCYCLE,   `CSR_CYCLE:    rdata = cycle_cnt[31:0];
+            `CSR_MCYCLEH,  `CSR_CYCLEH:   rdata = cycle_cnt[63:32];
+            `CSR_MINSTRET, `CSR_INSTRET:  rdata = instret_cnt[31:0];
+            `CSR_MINSTRETH,`CSR_INSTRETH: rdata = instret_cnt[63:32];
+            
+            `CSR_MSTATUS:  rdata = mstatus;
+            `CSR_MIE:      rdata = mie;
+            `CSR_MTVEC:    rdata = mtvec;
+            `CSR_MSCRATCH: rdata = mscratch;
+            `CSR_MEPC:     rdata = mepc;
+            `CSR_MCAUSE:   rdata = mcause;
+            `CSR_MIP:      rdata = mip;       
+            default:       rdata = 32'b0;
+        endcase
+
+        // 2. Internal Forwarding Bypass
+        // If a software instruction is reading AND writing this exact register 
+        // in the same cycle, forward the new modified data directly to the read port.
+        if (csr_we && csr_addr != `CSR_MIP) begin
+            if (csr_addr == `CSR_MSTATUS) begin
+                // Maintain M-mode hardwiring and mask out reserved bits during bypass
+                rdata = {19'b0, 2'b11, 3'b0, csr_apply(mstatus, wdata, csr_op)[7], 3'b0, csr_apply(mstatus, wdata, csr_op)[3], 3'b0};
+            end else begin
+                rdata = csr_apply(rdata, wdata, csr_op);
+            end
+        end
+    end
+
+    // =====================================================================
+    //  CSR Write Logic (Sequential)
+    // =====================================================================
     always @(posedge clk) begin
         if (rst) begin
+            // Reset state: M-mode, interrupts disabled (MIE=0)
             cycle_cnt   <= 64'b0;
             instret_cnt <= 64'b0;
-            mstatus     <= 32'b0;       // MIE=0: interrupts disabled on reset
+            mstatus     <= {19'b0, 2'b11, 11'b0}; 
             mie         <= 32'b0;
             mtvec       <= 32'b0;
             mscratch    <= 32'b0;
@@ -127,39 +122,56 @@ module csr_file (
             mcause      <= 32'b0;
         end else begin
             
-            // --- Counters (always run) ---
-            cycle_cnt <= cycle_cnt + 1'b1; 
-            
-            if (inst_retire) begin
-                instret_cnt <= instret_cnt + 1'b1; 
-            end
+            // --- 1. Counters (Software Writable + Auto Increment) ---
+            // cycle
+            if (csr_we && (csr_addr == `CSR_MCYCLE || csr_addr == `CSR_CYCLE))
+                cycle_cnt[31:0] <= csr_apply(cycle_cnt[31:0], wdata, csr_op);
+            else 
+                cycle_cnt[31:0] <= cycle_cnt[31:0] + 1'b1;
 
-            // --- Hardware Trap Entry (Highest Priority) ---
-            // This covers both synchronous traps (ecall) and asynchronous
-            // interrupts. The datapath asserts trap_en for both cases and
-            // supplies the appropriate trap_pc and trap_cause.
+            // cycleh
+            if (csr_we && (csr_addr == `CSR_MCYCLEH || csr_addr == `CSR_CYCLEH))
+                cycle_cnt[63:32] <= csr_apply(cycle_cnt[63:32], wdata, csr_op);
+            else if (cycle_cnt[31:0] == 32'hFFFFFFFF && !(csr_we && (csr_addr == `CSR_MCYCLE || csr_addr == `CSR_CYCLE)))
+                cycle_cnt[63:32] <= cycle_cnt[63:32] + 1'b1;
+
+            // instret
+            if (csr_we && (csr_addr == `CSR_MINSTRET || csr_addr == `CSR_INSTRET))
+                instret_cnt[31:0] <= csr_apply(instret_cnt[31:0], wdata, csr_op);
+            else if (inst_retire)
+                instret_cnt[31:0] <= instret_cnt[31:0] + 1'b1;
+
+            // instreth
+            if (csr_we && (csr_addr == `CSR_MINSTRETH || csr_addr == `CSR_INSTRETH))
+                instret_cnt[63:32] <= csr_apply(instret_cnt[63:32], wdata, csr_op);
+            else if (inst_retire && instret_cnt[31:0] == 32'hFFFFFFFF && !(csr_we && (csr_addr == `CSR_MINSTRET || csr_addr == `CSR_INSTRET)))
+                instret_cnt[63:32] <= instret_cnt[63:32] + 1'b1;
+
+
+            // --- 2. Hardware Trap / Return Logic ---
             if (trap_en) begin
                 mepc    <= trap_pc;
                 mcause  <= trap_cause;
-                // Save and disable interrupts
                 mstatus[7] <= mstatus[3];   // MPIE ← MIE
                 mstatus[3] <= 1'b0;         // MIE  ← 0
             end
-            // --- MRET (restore interrupt state) ---
             else if (mret_en) begin
                 mstatus[3] <= mstatus[7];   // MIE  ← MPIE
                 mstatus[7] <= 1'b1;         // MPIE ← 1
             end
-            // --- Software CSR Instructions ---
+            
+            // --- 3. Software CSR Instructions ---
             else if (csr_we) begin
                 case (csr_addr)
-                    `CSR_MSTATUS: mstatus  <= csr_apply(mstatus, wdata, csr_op);
-                    `CSR_MIE:     mie      <= csr_apply(mie, wdata, csr_op);
-                    `CSR_MTVEC:   mtvec    <= csr_apply(mtvec, wdata, csr_op);
-                    `CSR_MSCRATCH:mscratch <= csr_apply(mscratch, wdata, csr_op);
-                    `CSR_MEPC:    mepc     <= csr_apply(mepc, wdata, csr_op);
-                    `CSR_MCAUSE:  mcause   <= csr_apply(mcause, wdata, csr_op);
-                    // MIP is read-only — writes to it are silently ignored
+                    `CSR_MSTATUS: begin
+                        // Hardwire MPP (bits 12:11) to 2'b11, mask reserved bits, write to MPIE (7) and MIE (3)
+                        mstatus <= {19'b0, 2'b11, 3'b0, csr_apply(mstatus, wdata, csr_op)[7], 3'b0, csr_apply(mstatus, wdata, csr_op)[3], 3'b0};
+                    end
+                    `CSR_MIE:      mie      <= csr_apply(mie, wdata, csr_op);
+                    `CSR_MTVEC:    mtvec    <= csr_apply(mtvec, wdata, csr_op);
+                    `CSR_MSCRATCH: mscratch <= csr_apply(mscratch, wdata, csr_op);
+                    `CSR_MEPC:     mepc     <= csr_apply(mepc, wdata, csr_op);
+                    `CSR_MCAUSE:   mcause   <= csr_apply(mcause, wdata, csr_op);
                 endcase
             end
         end
