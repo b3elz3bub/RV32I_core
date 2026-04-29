@@ -110,5 +110,21 @@ module tb;
             $finish;
         end
     end
-
+    // ----------------------------------------------------
+    // ZIFENCE.I HARVARD SNOOPER
+    // ----------------------------------------------------
+    always @(posedge clk) begin
+        if (dut.mem_memwrite_en && dut.mem_alu_out < 32'h00040000) begin
+            // Mirror any store to IMEM range (Harvard coherence for FENCE.I)
+            if (dut.mem_memstore_ctrl == 4'b1111) 
+                dut.imem_inst.mem[dut.mem_alu_out[17:2]] <= dut.store_data;
+            else begin
+                // Sub-word write: merge bytes
+                if (dut.mem_memstore_ctrl[0]) dut.imem_inst.mem[dut.mem_alu_out[17:2]][7:0]   <= dut.store_data[7:0];
+                if (dut.mem_memstore_ctrl[1]) dut.imem_inst.mem[dut.mem_alu_out[17:2]][15:8]  <= dut.store_data[15:8];
+                if (dut.mem_memstore_ctrl[2]) dut.imem_inst.mem[dut.mem_alu_out[17:2]][23:16] <= dut.store_data[23:16];
+                if (dut.mem_memstore_ctrl[3]) dut.imem_inst.mem[dut.mem_alu_out[17:2]][31:24] <= dut.store_data[31:24];
+            end
+        end
+    end
 endmodule

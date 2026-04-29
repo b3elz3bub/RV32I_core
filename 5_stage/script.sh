@@ -2,7 +2,7 @@
 
 # Define directories based on your actual file structure
 # (Adjust the path if you are running this from outside the riscv-arch-test folder)
-SRC_DIR="/home/beelzebub/Documents/workspaces/RV32I_core/riscv-arch-test/work/RV32I_core/elfs/rv32i/I"
+SRC_DIR="/home/beelzebub/Documents/workspaces/RV32I_core/riscv-arch-test/work/RV32I_core/elfs/priv/ExceptionsSm"
 DEST_DIR="/home/beelzebub/Documents/workspaces/RV32I_core/5_stage/software/arch_tests_elfs"
 
 # Ensure the destination directory exists

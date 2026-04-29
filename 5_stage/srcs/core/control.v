@@ -19,7 +19,9 @@ module control(
     output reg csr_we,
     output reg [1:0] csr_op,
     output reg csr_imm_sel,
-    output reg wb_is_csr
+    output reg wb_is_csr,
+    output reg is_ebreak,
+    output reg fence_i_en
 );
     wire [2:0] funct3 = inst[14:12];
     wire [6:0] opcode = inst[6:0];
@@ -33,7 +35,7 @@ module control(
         bsel_ctrl = 0;        regwrite_ctrl = 2'b00;
         alu_ctrl = 4'b0000;   memstore_ctrl = 4'b0000;
         memload_ctrl = 3'b000; branchcond_ctrl = 3'b000; trap_en=0;
-        mret_en = 0;
+        mret_en = 0; is_ebreak = 0; fence_i_en = 0;
 
         //CSR Defaults
         csr_we = 0;
@@ -104,6 +106,7 @@ module control(
                         mret_en = 1;      // MRET: return from trap handler
                     else
                         trap_en = 1;      // ECALL or EBREAK
+                        if (inst[31:20] == 12'h001) is_ebreak = 1;
                 end else begin
                     // CSR 
                     csr_op = funct3[1:0];      // Maps to 01=W, 10=S, 11=C
@@ -118,6 +121,9 @@ module control(
                         csr_we = 1;
                     end
                 end
+            end
+            7'b0001111: begin // FENCE.I
+                fence_i_en = 1;
             end
         endcase
     end

@@ -71,7 +71,7 @@ module csr_file (
             endcase
         end
     endfunction
-
+    wire [31:0] next_mstatus = csr_apply(mstatus, wdata, csr_op);
     // =====================================================================
     //  CSR Read Mux (Combinational + Internal Bypass Hazard Fix)
     // =====================================================================
@@ -92,18 +92,6 @@ module csr_file (
             `CSR_MIP:      rdata = mip;       
             default:       rdata = 32'b0;
         endcase
-
-        // 2. Internal Forwarding Bypass
-        // If a software instruction is reading AND writing this exact register 
-        // in the same cycle, forward the new modified data directly to the read port.
-        if (csr_we && csr_addr != `CSR_MIP) begin
-            if (csr_addr == `CSR_MSTATUS) begin
-                // Maintain M-mode hardwiring and mask out reserved bits during bypass
-                rdata = {19'b0, 2'b11, 3'b0, csr_apply(mstatus, wdata, csr_op)[7], 3'b0, csr_apply(mstatus, wdata, csr_op)[3], 3'b0};
-            end else begin
-                rdata = csr_apply(rdata, wdata, csr_op);
-            end
-        end
     end
 
     // =====================================================================
@@ -165,7 +153,7 @@ module csr_file (
                 case (csr_addr)
                     `CSR_MSTATUS: begin
                         // Hardwire MPP (bits 12:11) to 2'b11, mask reserved bits, write to MPIE (7) and MIE (3)
-                        mstatus <= {19'b0, 2'b11, 3'b0, csr_apply(mstatus, wdata, csr_op)[7], 3'b0, csr_apply(mstatus, wdata, csr_op)[3], 3'b0};
+                        mstatus <= {19'b0, 2'b11, 3'b0, next_mstatus[7], 3'b0, next_mstatus[3], 3'b0};
                     end
                     `CSR_MIE:      mie      <= csr_apply(mie, wdata, csr_op);
                     `CSR_MTVEC:    mtvec    <= csr_apply(mtvec, wdata, csr_op);

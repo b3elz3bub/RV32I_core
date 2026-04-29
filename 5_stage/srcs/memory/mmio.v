@@ -44,7 +44,7 @@ module system_bus(
     wire is_timer  = (addr[31:4] == 28'h8000200);           
     
     // 2. Move tohost to match Linker/Macro/Sail (0x50000)
-    wire is_tohost = (addr == 32'h00050000);
+    wire is_tohost = (addr == 32'h00070000);
 
     
     wire [31:0] ram_read_data;
@@ -105,8 +105,7 @@ module system_bus(
     always @(posedge clk) begin
         if (rst) begin
             tohost_valid <= 0;
-        end else if (write_en && write_data == 32'h1) begin 
-            // If the CPU writes a '1' anywhere, stop the sim!
+        end else if (write_en && is_tohost && write_data != 32'h0) begin
             tohost_valid <= 1;
             tohost <= write_data;
         end

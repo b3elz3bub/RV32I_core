@@ -55,12 +55,16 @@ module ID_EX(
     input        id_csr_imm_sel,
     input        id_wb_is_csr,
     input [11:0] id_csr_addr,
+    input        id_fence_i_en,
+    input        id_is_ebreak,
 
     output reg        ex_csr_we,
     output reg [1:0]  ex_csr_op,
     output reg        ex_csr_imm_sel,
     output reg        ex_wb_is_csr,
     output reg [11:0] ex_csr_addr,
+    output reg        ex_fence_i_en,
+    output reg        ex_is_ebreak,
 
     // ── Trap / MRET ──
     input        id_mret_en,
@@ -83,6 +87,8 @@ module ID_EX(
             ex_wb_is_csr <= 0; ex_csr_addr <= 0;
 
             ex_mret_en <= 0;
+            ex_fence_i_en <= 0;
+            ex_is_ebreak <= 0;
 
         end else if (flush) begin
             ex_regwrite_en <= 1'b0;
@@ -92,6 +98,8 @@ module ID_EX(
             ex_jalr_ctrl   <= 1'b0;
             ex_csr_we      <= 1'b0;
             ex_mret_en     <= 1'b0;
+            ex_fence_i_en     <= 1'b0;
+            ex_is_ebreak     <= 1'b0;
 
             ex_rs1_data  <= id_rs1_data;
             ex_rs2_data  <= id_rs2_data;
@@ -101,7 +109,6 @@ module ID_EX(
             ex_rd        <= id_rd;
             ex_rs1_addr  <= id_rs1_addr;
             ex_rs2_addr  <= id_rs2_addr;
-            
             ex_alu_ctrl        <= id_alu_ctrl;
             ex_auipc_ctrl      <= id_auipc_ctrl;
             ex_bsel_ctrl       <= id_bsel_ctrl;
@@ -148,6 +155,8 @@ module ID_EX(
             ex_csr_addr    <= id_csr_addr;
 
             ex_mret_en     <= id_mret_en;
+            ex_fence_i_en  <= id_fence_i_en;
+            ex_is_ebreak   <= id_is_ebreak;
         end
         // Implicit else: if (stall), hold current state (all registers maintain current values)
     end

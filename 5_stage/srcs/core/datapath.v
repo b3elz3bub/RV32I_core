@@ -58,6 +58,8 @@ module datapath(
     wire        id_csr_we, id_csr_imm_sel, id_wb_is_csr;
     wire [1:0]  id_csr_op;
     wire [11:0] id_csr_addr = id_inst[31:20];
+    wire id_fence_i_en;
+    wire id_is_ebreak;
 
     // --- ID/EX outputs ---
     wire [31:0] ex_rs1_data, ex_rs2_data, ex_imm, ex_pc, ex_pc_plus_4;
@@ -77,6 +79,8 @@ module datapath(
     wire [1:0]  ex_csr_op;
     wire [11:0] ex_csr_addr;
     wire        ex_mret_en;
+    wire        ex_fence_i_en;
+    wire        ex_is_ebreak;
 
     // --- EX (ALU + branch resolution) ---
     wire [31:0] alu_out;
@@ -157,7 +161,7 @@ module datapath(
                 ex_trap_en <= id_trap_en;
             end
 
-            mem_valid <= ex_valid;
+            mem_valid <= ex_valid & ~csr_trap_en; 
             wb_valid  <= mem_valid;
         end
     end
@@ -175,8 +179,10 @@ module datapath(
     // Unified trap signal to CSR file — covers both ecall and hardware interrupt
     wire csr_trap_en    = ex_trap_en | interrupt_inject;
     wire [31:0] csr_trap_pc    = ex_pc;  // PC of instruction in EX stage
-    wire [31:0] csr_trap_cause = ex_trap_en ? 32'd11 :      // ecall from M-mode
-                                 {1'b1, 31'd7};              // machine timer interrupt (async, code 7)
+    // In datapath.v (Interrupt Injection Logic)
+    wire [31:0] csr_trap_cause = interrupt_inject ? {1'b1, 31'd7} : // Timer IRQ
+                                ex_is_ebreak     ? 32'd3         : // Breakpoint
+                                                    32'd11;         // ECALL
 
     // =========================================================================
     //  IF — Instruction Fetch
@@ -209,6 +215,7 @@ module datapath(
             `PC_SEL_JALR:   pc_next = jalr_target;
             `PC_SEL_MTVEC:  pc_next = mtvec_out;       // trap/interrupt entry
             `PC_SEL_MEPC:   pc_next = mepc_out;         // mret return
+            3'd5:           pc_next = ex_pc_plus_4;
             default:        pc_next = if_pc_plus_4;
         endcase
     end
@@ -270,7 +277,9 @@ module datapath(
         .csr_we(id_csr_we),
         .csr_op(id_csr_op),
         .csr_imm_sel(id_csr_imm_sel),
-        .wb_is_csr(id_wb_is_csr)
+        .wb_is_csr(id_wb_is_csr),
+        .is_ebreak(id_is_ebreak),
+        .fence_i_en(id_fence_i_en)
     );
 
     regfile regfile_inst(
@@ -337,6 +346,10 @@ module datapath(
         
         .ex_csr_we(ex_csr_we), .ex_csr_op(ex_csr_op), .ex_csr_imm_sel(ex_csr_imm_sel), 
         .ex_wb_is_csr(ex_wb_is_csr), .ex_csr_addr(ex_csr_addr),
+        .id_fence_i_en(id_fence_i_en),
+        .ex_fence_i_en(ex_fence_i_en),
+        .id_is_ebreak(id_is_ebreak),
+        .ex_is_ebreak(ex_is_ebreak),
 
         .id_mret_en(id_mret_en),
         .ex_mret_en(ex_mret_en)
@@ -414,6 +427,7 @@ module datapath(
                     (ex_mret_en)    ? `PC_SEL_MEPC   :   // mret → mepc
                     (ex_jalr_ctrl)  ? `PC_SEL_JALR   :   // JALR
                     (ex_jal_ctrl | branch_taken) ? `PC_SEL_BRANCH :  // JAL / taken branch
+                    (ex_fence_i_en) ? 3'd5           :   // <--- Treat FENCE.I as a branch
                     `PC_SEL_PLUS4;                        // default
 
     assign pipeline_flush = (pc_sel != `PC_SEL_PLUS4);
@@ -424,7 +438,7 @@ module datapath(
     wire [31:0] ex_csr_rdata;
 
     // Suppress CSR software write if we are also taking an interrupt/trap this cycle
-    wire csr_we_effective = ex_csr_we & ~csr_trap_en & ~interrupt_inject;
+    wire csr_we_effective = ex_csr_we & ex_valid & ~csr_trap_en & ~interrupt_inject;
 
     csr_file my_csr_unit (
         .clk(clk),
