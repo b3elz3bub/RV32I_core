@@ -48,8 +48,7 @@ set_property IOSTANDARD LVCMOS33 [get_ports {uart_rx_pin}]
 set_property IOSTANDARD LVCMOS33 [get_ports {uart_tx_pin}]
 
 # ----------------------------------------------------------------------------
-# UART DMA Toggle (debug signal — PMOD JA3, probe with logic analyser)
-#   Reassign to a LED or other pin if you want it visible on-board
+# UART DMA Toggle (now internal to top.v via sw[7])
 # ----------------------------------------------------------------------------
-set_property PACKAGE_PIN Y10   [get_ports {uart_dma_toggle}]
-set_property IOSTANDARD LVCMOS33 [get_ports {uart_dma_toggle}]
+# set_property PACKAGE_PIN Y10   [get_ports {uart_dma_toggle}]
+# set_property IOSTANDARD LVCMOS33 [get_ports {uart_dma_toggle}]

@@ -44,3 +44,4 @@ xsim.dir/
 
 #temporary files
 temp.tcl
+testloader.shriscv-arch-test/

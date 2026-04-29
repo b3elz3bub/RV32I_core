@@ -3,7 +3,6 @@ module top(
     input rst_btn,      // Physical button
     input [7:0] sw,     // Physical switches
     input uart_rx_pin,
-    input uart_dma_toggle,
     output uart_tx_pin,
     output [7:0] ld     // Physical LEDs
 );
@@ -17,6 +16,8 @@ module top(
         .reset(rst_btn),
         .locked(locked)
     );
+
+    wire uart_dma_toggle = sw[7];
 
     wire [7:0] cpu_led_out;
     wire [31:0] uart_addr;
@@ -65,7 +66,7 @@ module top(
         .clk(cpu_clk),
         .rst(~locked || rst_btn || uart_dma_toggle),
         .leds(cpu_led_out),
-        .switches(sw),
+        .switches({1'b0, sw[6:0]}),
         .dma_load(uart_imem_load),
         .dma_data(uart_imem_data),
         .dma_addr(uart_imem_addr),
@@ -76,12 +77,12 @@ module top(
         .uart_read_data(uart_read_data)
     );
 
-    // 3. LED Mapping — identical to single-cycle top
+    // 3. LED Mapping — refined for status visualization
     reg [23:0] heartbeat_cnt;
 
-    assign ld[0] = locked;               // Status: PLL Locked
-    assign ld[7] = heartbeat_cnt[23];    // Status: CPU Clocking
-    assign ld[6:1] = cpu_led_out[6:1];   // Software: Bits 1-4
+    assign ld[0] = heartbeat_cnt[23];    // Status: CPU Clocking (Heartbeat)
+    assign ld[1] = locked;               // Status: PLL Locked
+    assign ld[7:2] = cpu_led_out[7:2];   // Software: Bits 2-7
 
     always @(posedge cpu_clk) begin
         if (rst_btn) heartbeat_cnt <= 0;

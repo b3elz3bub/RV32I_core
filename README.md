@@ -43,9 +43,8 @@ Implemented (in the core/control logic):
 
 Not fully implemented / explicitly excluded during bringing-up:
 
-- CSR instructions (e.g. CSRRW/CSRRS/CSRRC)
-- `fence`
-- `ecall` / `ebreak` handling may exist as `trap_en` in `single_cycle`, but wiring/behavior depends on the rest of the design.
+- `fence` (Note: `fence.i` is implemented in 5-stage)
+- Misaligned instruction/load/store hardware traps
 
 Note on stores:
 
@@ -84,7 +83,16 @@ Ensure that you change directory to ./single_cycle before running the TCL script
 
 ---
 
-## Current WIP:
-- UART bootloader
-- 5 stage pipelined design
-- CSR and TRAP related stuff
+## 5-Stage Pipeline Status (FreeRTOS Ready)
+
+The `5_stage/` directory contains an upgraded 5-stage pipelined version of the core with:
+- **Full CSR Support**: `mstatus`, `mie`, `mtvec`, `mscratch`, `mepc`, `mcause`, `mip`, and cycle counters.
+- **Hardware Interrupts**: Timer peripheral (`mtime`/`mtimecmp`) generating precise interrupts.
+- **Exceptions**: `ECALL`, `EBREAK`, and `MRET` fully implemented to specification.
+- **Memory/IO**: 64KB Instruction RAM, 64KB Data RAM (BRAM based), and a UART bridge.
+- **Architectural Testing**: Passes RISC-V architectural compliance test suite (`riscv-arch-test`) for RV32I base integer instruction set and Zicsr extension. 
+
+**This core is fully prepared for FreeRTOS integration!**
+
+### Note on `riscv-arch-test` 
+The `riscv-arch-test` directory is a cloned repository used to validate the CPU. Git will treat it as a submodule (storing a reference hash) unless its `.git` folder is removed. You can safely ignore its contents for standard usage.

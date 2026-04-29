@@ -2,12 +2,13 @@
 // System Bus / MMIO Controller
 //
 // Memory Map:
-//   0x0000_0000 – 0x0000_1FFF  RAM (8 KB, LUTRAM, async read)
+//   0x0000_0000 - 0x0000_FFFF  IMEM (64 KB, in imem.v)
+//   0x0004_0000 - 0x0004_FFFF  DMEM (64 KB, in dmem.v)
 //   0x8000_0000                LEDs [7:0]   (R/W, 1 byte)
 //   0x8000_0004                Switches [7:0] (R, 1 byte)
 //   0x8000_1000                UART data    (R/W)
 //   0x8000_1004                UART status  (R)
-//   0x8000_2000 – 0x8000_200C  Timer (mtime_lo/hi, mtimecmp_lo/hi)
+//   0x8000_2000 - 0x8000_200C  Timer (mtime_lo/hi, mtimecmp_lo/hi)
 
 module system_bus(
     input clk,
@@ -28,8 +29,6 @@ module system_bus(
     output uart_read_en,
     input [31:0] uart_read_data,
 
-    output reg [31:0] tohost,
-    output reg        tohost_valid,
     // Timer interrupt output (directly from timer peripheral)
     output timer_irq
 );
@@ -42,9 +41,6 @@ module system_bus(
     wire is_switch = (addr == `ADDR_SW);                    
     wire is_uart   = (addr == `ADDR_UART_DATA) || (addr == `ADDR_UART_STAT);
     wire is_timer  = (addr[31:4] == 28'h8000200);           
-    
-    // 2. Move tohost to match Linker/Macro/Sail (0x50000)
-    wire is_tohost = (addr == 32'h00070000);
 
     
     wire [31:0] ram_read_data;
@@ -100,14 +96,5 @@ module system_bus(
             leds <= 8'b0;
         else if (write_en && is_led)
             leds <= write_data[7:0];
-    end
-    // Inside system_bus.v
-    always @(posedge clk) begin
-        if (rst) begin
-            tohost_valid <= 0;
-        end else if (write_en && is_tohost && write_data != 32'h0) begin
-            tohost_valid <= 1;
-            tohost <= write_data;
-        end
     end
 endmodule

@@ -13,7 +13,7 @@ PASSED=0
 FAILED=0
 
 # Use the absolute path here. This makes the script bulletproof.
-SOFTWARE_DIR="/home/beelzebub/Documents/workspaces/RV32I_core/5_stage/software/arch_tests_elfs"
+SOFTWARE_DIR="./software/arch_tests_elfs"
 
 echo "------------------------------------------------"
 echo " Running RISC-V RV32I Compliance Suite"

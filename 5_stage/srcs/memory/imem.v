@@ -8,12 +8,12 @@ module imem(
     input [31:0] data,
     input [31:0] addr
 );
-    reg [31:0] mem [0:65535];//16KB memory (65536 words)
+    reg [31:0] mem [0:16383];//64KB memory (16384 words)
     always @(posedge clk) begin
         if (load) begin
             mem[addr[15:2]] <= data;
         end
-        inst <= mem[pc[17:2]];
+        inst <= mem[pc[15:2]];
     end
 
     //initial begin

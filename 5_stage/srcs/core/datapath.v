@@ -15,10 +15,6 @@ module datapath(
     output uart_read_en,
     input [31:0] uart_read_data,
 
-    //To Host
-    output [31:0] tohost,
-    output        tohost_valid,
-
     // IO
     output [7:0] leds,
     input  [7:0] switches
@@ -525,9 +521,7 @@ module datapath(
         .uart_write_en(uart_write_en),
         .uart_read_en(uart_read_en),
         .uart_read_data(uart_read_data),
-        .timer_irq(bus_timer_irq),
-        .tohost(tohost),
-        .tohost_valid(tohost_valid)
+        .timer_irq(bus_timer_irq)
     );
 
     loadext loadext_inst(
